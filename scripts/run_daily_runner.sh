@@ -12,6 +12,20 @@ LOG_FILE="$LOG_DIR/run_daily_${STAMP}.log"
 
 ts() { /bin/date "+%Y-%m-%dT%H:%M:%S%z"; }
 
+notify_error() {
+  /usr/bin/osascript <<EOF
+display notification "Daglig kjøring FEILET – sjekk logs/" with title "Aqua-historikk"
+EOF
+}
+
+on_error() {
+  echo "!! $(ts) Runner FAILED"
+  notify_error
+}
+
+trap on_error ERR
+
+
 LOCK_DIR="/tmp/aqua_historikk_run_daily.lockdir"
 
 exec > >(tee -a "$LOG_FILE") 2>&1
