@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Akvakulturregisteret – uttrekk og historikk</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- sql.js (WASM) -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+  <script defer src="app.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="title">Akvakulturregisteret – historikk</div>
+      <div class="subtitle">SQLite i nettleseren (sql.js) • GitHub Pages</div>
+    </div>
+
+    <div class="status">
+      <span id="dbStatus" class="pill">Laster database…</span>
+      <span id="dbMeta" class="muted"></span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Navigasjon">
+    <a id="tab-now" class="tab" href="#/now" role="tab">Nå-status</a>
+    <a id="tab-permit" class="tab" href="#/permit" role="tab">Tillatelse</a>
+    <a id="tab-owner" class="tab" href="#/owner" role="tab">Eier</a>
+  </nav>
+
+  <main class="container">
+    <!-- NOW -->
+    <section id="view-now" class="view">
+      <h2>Nå-status</h2>
+
+      <div class="controls">
+        <input id="nowSearch" class="input" placeholder="Søk: orgn.nr eller tillatelsesnr. …" />
+        <label class="checkbox">
+          <input id="onlyGrunnrente" type="checkbox" />
+          Kun grunnrentepliktig
+        </label>
+      </div>
+
+      <div id="nowSummary" class="muted"></div>
+
+      <div class="table-wrap">
+        <table class="table" id="nowTable">
+          <thead>
+            <tr>
+              <th>Tillatelsesnr.</th>
+              <th>Innehaver</th>
+              <th>Org.nr.</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PERMIT -->
+    <section id="view-permit" class="view">
+      <h2>Tillatelse</h2>
+
+      <div class="controls">
+        <input id="permitInput" class="input" placeholder="Skriv permit_key (f.eks. H-F-0910) …" />
+        <button id="permitGo" class="button" type="button">Åpne</button>
+      </div>
+
+      <div id="permitCard" class="card hidden"></div>
+
+      <h3>Historikk</h3>
+      <div class="table-wrap">
+        <table class="table" id="permitHistoryTable">
+          <thead>
+            <tr>
+              <th>Gyldig fra</th>
+              <th>Gyldig til</th>
+              <th>Eier</th>
+              <th>Owner identity</th>
+              <th>Org.nr</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div id="permitEmpty" class="muted"></div>
+    </section>
+
+    <!-- OWNER -->
+    <section id="view-owner" class="view">
+      <h2>Eier</h2>
+
+      <div class="controls">
+        <input id="ownerInput" class="input" placeholder="Skriv owner_identity (f.eks. 987… eller PN:Navn) …" />
+        <button id="ownerGo" class="button" type="button">Åpne</button>
+      </div>
+
+      <div id="ownerCard" class="card hidden"></div>
+
+      <h3>Aktive tillatelser nå</h3>
+      <div class="table-wrap">
+        <table class="table" id="ownerActiveTable">
+          <thead>
+            <tr>
+              <th>Tillatelse</th>
+              <th>Eiernavn</th>
+              <th>Snapshot</th>
+              <th>Grunnrente</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3>Historikk (alle perioder)</h3>
+      <div class="table-wrap">
+        <table class="table" id="ownerHistoryTable">
+          <thead>
+            <tr>
+              <th>Tillatelse</th>
+              <th>Gyldig fra</th>
+              <th>Gyldig til</th>
+              <th>Eiernavn</th>
+              <th>Org.nr</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div id="ownerEmpty" class="muted"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="muted">
+      Kilde: Fiskeridirektoratet
+    </span>
+  </footer>
+</body>
+</html>
