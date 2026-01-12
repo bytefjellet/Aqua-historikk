@@ -1,4 +1,9 @@
 /* global initSqlJs */
+
+// =========================
+// app.js (full replacement)
+// =========================
+
 let SQL = null;
 let db = null;
 
@@ -44,7 +49,6 @@ function showView(viewId) {
 }
 
 function execAll(sql, params = []) {
-  // sql.js supports positional bind via "?" with array params using prepare
   const stmt = db.prepare(sql);
   stmt.bind(params);
   const rows = [];
@@ -58,38 +62,68 @@ function one(sql, params = []) {
   return rows.length ? rows[0] : null;
 }
 
+function iso10(s) {
+  if (!s) return null;
+  const t = String(s).trim();
+  if (!t) return null;
+  return t.slice(0, 10);
+}
+
+// --- sort state (NOW) ---
+const sortState = {
+  now: { key: "permit_key", dir: 1 } // dir: 1 asc, -1 desc
+};
+
+function compare(a, b) {
+  if (a == null && b == null) return 0;
+  if (a == null) return -1;
+  if (b == null) return 1;
+  const as = String(a).toLowerCase();
+  const bs = String(b).toLowerCase();
+  if (as < bs) return -1;
+  if (as > bs) return 1;
+  return 0;
+}
+
+function clearSortIndicators(tableId) {
+  const ths = document.querySelectorAll(`#${tableId} thead th`);
+  ths.forEach(th => th.classList.remove("sort-asc", "sort-desc"));
+}
+
+function setSortIndicator(tableId, key, dir) {
+  clearSortIndicators(tableId);
+  const th = document.querySelector(`#${tableId} thead th[data-sort="${CSS.escape(key)}"]`);
+  if (th) th.classList.add(dir === 1 ? "sort-asc" : "sort-desc");
+}
+
 // --- load db ---
 async function loadDatabase() {
   setStatus("Laster database…");
   setMeta("");
 
-  // init sql.js
   if (!SQL) {
     SQL = await initSqlJs({
       locateFile: (f) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}`,
     });
   }
 
-  // fetch sqlite
   const res = await fetch(`${DB_URL}?v=${Date.now()}`, { cache: "no-store" });
-
   if (!res.ok) throw new Error(`Kunne ikke hente ${DB_URL} (HTTP ${res.status})`);
   const buf = await res.arrayBuffer();
 
-  // open
   if (db) db.close();
   db = new SQL.Database(new Uint8Array(buf));
 
-  // meta
   const snap = one(`SELECT MAX(snapshot_date) AS max_date, COUNT(*) AS n FROM snapshots;`);
   const pc = one(`SELECT COUNT(*) AS n FROM permit_current;`);
   const oh = one(`SELECT COUNT(*) AS n FROM ownership_history;`);
 
   const last = snap?.max_date ? `Sist snapshot: ${snap.max_date}` : "Ingen snapshots";
   setStatus("DB lastet", "ok");
-  setMeta(`${last} • permit_current: ${pc?.n ?? "?"} • ownership_history: ${oh?.n ?? "?"} • ${Math.round(buf.byteLength/1024)} KB`);
+  setMeta(
+    `${last} • permit_current: ${pc?.n ?? "?"} • ownership_history: ${oh?.n ?? "?"} • ${Math.round(buf.byteLength / 1024)} KB`
+  );
 
-  // render current route
   renderRoute();
 }
 
@@ -102,10 +136,9 @@ function renderNow() {
   const only = $("onlyGrunnrente").checked;
 
   const baseSql = `
-    SELECT permit_key, owner_name, owner_identity, owner_orgnr
+    SELECT permit_key, owner_name, owner_identity, owner_orgnr, snapshot_date, grunnrente_pliktig
     FROM permit_current
     ${only ? "WHERE grunnrente_pliktig = 1" : ""}
-    ORDER BY permit_key
   `;
   const rows = execAll(baseSql);
 
@@ -113,9 +146,15 @@ function renderNow() {
     ? rows.filter(r =>
         String(r.permit_key ?? "").toLowerCase().includes(q) ||
         String(r.owner_name ?? "").toLowerCase().includes(q) ||
-        String(r.owner_identity ?? "").toLowerCase().includes(q)
+        String(r.owner_identity ?? "").toLowerCase().includes(q) ||
+        String(r.owner_orgnr ?? "").toLowerCase().includes(q)
       )
     : rows;
+
+  // sort
+  const { key, dir } = sortState.now;
+  filtered.sort((ra, rb) => dir * compare(ra[key], rb[key]));
+  setSortIndicator("nowTable", key, dir);
 
   $("nowSummary").textContent =
     `Viser ${filtered.length} av ${rows.length} tillatelser` + (only ? " (grunnrentepliktig)" : "");
@@ -123,26 +162,34 @@ function renderNow() {
   const tbody = $("nowTable").querySelector("tbody");
   tbody.innerHTML = "";
 
-  // cap rendering to keep it snappy; still searchable by narrowing
   const MAX = 2500;
   const displayRows = filtered.slice(0, MAX);
 
   for (const r of displayRows) {
     const tr = document.createElement("tr");
+    tr.classList.add("rowlink");
 
     const permit = escapeHtml(r.permit_key);
     const ownerName = escapeHtml(r.owner_name);
-    const ownerIdent = escapeHtml(r.owner_identity);
-    
     const orgnrOrIdent = (r.owner_orgnr && String(r.owner_orgnr).trim())
       ? String(r.owner_orgnr).trim()
       : String(r.owner_identity ?? "");
+
+    const snap = escapeHtml(r.snapshot_date || "");
+    const gr = Number(r.grunnrente_pliktig) === 1 ? "1" : "0";
 
     tr.innerHTML = `
       <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${permit}</a></td>
       <td>${ownerName}</td>
       <td><a class="link" href="#/owner/${encodeURIComponent(r.owner_identity)}">${escapeHtml(orgnrOrIdent)}</a></td>
+      <td class="muted">${snap}</td>
+      <td>${gr}</td>
     `;
+
+    tr.addEventListener("click", (e) => {
+      if (e.target && e.target.closest("a")) return;
+      toHashPermit(r.permit_key);
+    });
 
     tbody.appendChild(tr);
   }
@@ -150,7 +197,7 @@ function renderNow() {
   if (filtered.length > MAX) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td colspan="3" class="muted">
+      <td colspan="5" class="muted">
         Viser kun de første ${MAX} radene. Begrens søket for å se resten.
       </td>
     `;
@@ -169,7 +216,8 @@ function renderPermit(permitKey) {
   if (permitKey) $("permitInput").value = permitKey;
 
   if (!permitKey) {
-    $("permitEmpty").textContent = "Skriv en permit_key i feltet over, eller klikk en tillatelse fra Nå-status.";
+    $("permitEmpty").textContent =
+      "Skriv en permit_key i feltet over, eller klikk en tillatelse fra Nå-status.";
     return;
   }
 
@@ -179,72 +227,105 @@ function renderPermit(permitKey) {
     WHERE permit_key = ?;
   `, [permitKey]);
 
-  if (!now) {
+  const hist = execAll(`
+    SELECT
+      valid_from,
+      valid_to,
+      COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
+      owner_name,
+      owner_orgnr,
+      owner_identity,
+      tidsbegrenset
+    FROM ownership_history
+    WHERE permit_key = ?
+    ORDER BY date(valid_from), id;
+  `, [permitKey]);
+
+  if (!now && hist.length === 0) {
     $("permitEmpty").textContent = `Fant ikke permit_key: ${permitKey}`;
     return;
   }
 
   const card = $("permitCard");
   card.classList.remove("hidden");
-  card.innerHTML = `
-    <div><strong>${escapeHtml(now.permit_key)}</strong></div>
-    <div class="muted">Snapshot: ${escapeHtml(now.snapshot_date)} • Grunnrente: ${Number(now.grunnrente_pliktig) === 1 ? "1" : "0"}</div>
-    <div style="margin-top:8px">
-      <div><span class="muted">Eier:</span> ${escapeHtml(now.owner_name)}</div>
-      <div><span class="muted">Owner identity:</span>
-        <a class="link" href="#/owner/${encodeURIComponent(now.owner_identity)}">${escapeHtml(now.owner_identity)}</a>
+
+  if (now) {
+    card.innerHTML = `
+      <div><strong>${escapeHtml(now.permit_key)}</strong></div>
+      <div class="muted">
+        Snapshot: ${escapeHtml(now.snapshot_date)} • Grunnrente: ${Number(now.grunnrente_pliktig) === 1 ? "1" : "0"}
       </div>
-      <div><span class="muted">Org.nr:</span> ${escapeHtml(now.owner_orgnr || "")}</div>
-    </div>
-  `;
-
-  const hist = execAll(`
-  SELECT
-    valid_from,
-    valid_to,
-    COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
-    owner_name,
-    owner_orgnr,
-    owner_identity,
-    tidsbegrenset
-  FROM ownership_history
-  WHERE permit_key = ?
-  ORDER BY date(valid_from), id;
-`, [permitKey]);
-
-const tbody = $("permitHistoryTable").querySelector("tbody");
-tbody.innerHTML = "";
-
-for (let i = 0; i < hist.length; i++) {
-  const r = hist[i];
-  const next = hist[i + 1] || null;
-
-  const validTo = (r.valid_to && String(r.valid_to).trim()) ? String(r.valid_to).trim() : null;
-  const tids = (r.tidsbegrenset && String(r.tidsbegrenset).trim()) ? String(r.tidsbegrenset).trim() : null;
-
-  let reason = "";
-  if (!validTo) {
-    reason = ""; // aktiv periode
-  } else if (tids && tids.slice(0, 10) === validTo.slice(0, 10)) {
-    reason = `Utløpt (tidsbegrenset ${tids.slice(0, 10)})`;
-  } else if (next) {
-    reason = "Overført / ny periode";
+      <div style="margin-top:8px">
+        <div><span class="muted">Eier:</span> ${escapeHtml(now.owner_name)}</div>
+        <div><span class="muted">Owner identity:</span>
+          <a class="link" href="#/owner/${encodeURIComponent(now.owner_identity)}">${escapeHtml(now.owner_identity)}</a>
+        </div>
+        <div><span class="muted">Org.nr:</span> ${escapeHtml(now.owner_orgnr || "")}</div>
+      </div>
+    `;
   } else {
-    reason = "Avsluttet";
+    // not active in permit_current => show last known from history
+    const last = hist[hist.length - 1];
+    const lastTo = iso10(last.valid_to);
+    const tb = iso10(last.tidsbegrenset);
+
+    let endText = "Ikke aktiv";
+    if (lastTo) {
+      endText = (tb && tb === lastTo)
+        ? `Utløpt (tidsbegrenset ${tb})`
+        : `Avsluttet (${lastTo})`;
+    }
+
+    const maxSnap = one(`SELECT MAX(snapshot_date) AS max_date FROM snapshots;`);
+    const maxDate = maxSnap?.max_date ? String(maxSnap.max_date) : "";
+
+    card.innerHTML = `
+      <div><strong>${escapeHtml(permitKey)}</strong></div>
+      <div class="muted">Ikke aktiv i siste snapshot${maxDate ? ` (${escapeHtml(maxDate)})` : ""} • ${escapeHtml(endText)}</div>
+      <div style="margin-top:8px">
+        <div><span class="muted">Siste kjente eier:</span> ${escapeHtml(last.owner_name || "")}</div>
+        <div><span class="muted">Owner identity:</span>
+          <a class="link" href="#/owner/${encodeURIComponent(last.owner_identity)}">${escapeHtml(last.owner_identity || "")}</a>
+        </div>
+        <div><span class="muted">Org.nr:</span> ${escapeHtml(last.owner_orgnr || "")}</div>
+        ${tb ? `<div><span class="muted">Tidsbegrenset:</span> ${escapeHtml(tb)}</div>` : ""}
+      </div>
+    `;
   }
 
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${escapeHtml(r.valid_from)}</td>
-    <td>${escapeHtml(r.valid_to_label)}</td>
-    <td class="muted">${escapeHtml(reason)}</td>
-    <td>${escapeHtml(r.owner_name)}</td>
-    <td><a class="link" href="#/owner/${encodeURIComponent(r.owner_identity)}">${escapeHtml(r.owner_identity)}</a></td>
-    <td>${escapeHtml(r.owner_orgnr || "")}</td>
-  `;
-  tbody.appendChild(tr);
-}
+  // render history table
+  const tbody = $("permitHistoryTable").querySelector("tbody");
+  tbody.innerHTML = "";
 
+  for (let i = 0; i < hist.length; i++) {
+    const r = hist[i];
+    const next = hist[i + 1] || null;
+
+    const validTo = iso10(r.valid_to);
+    const tb = iso10(r.tidsbegrenset);
+
+    let reason = "";
+    if (!validTo) {
+      reason = "";
+    } else if (tb && tb === validTo) {
+      reason = `Utløpt (tidsbegrenset ${tb})`;
+    } else if (next) {
+      reason = "Overført / ny periode";
+    } else {
+      reason = "Avsluttet";
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(r.valid_from)}</td>
+      <td>${escapeHtml(r.valid_to_label)}</td>
+      <td class="muted">${escapeHtml(reason)}</td>
+      <td>${escapeHtml(r.owner_name)}</td>
+      <td><a class="link" href="#/owner/${encodeURIComponent(r.owner_identity)}">${escapeHtml(r.owner_identity)}</a></td>
+      <td>${escapeHtml(r.owner_orgnr || "")}</td>
+    `;
+    tbody.appendChild(tr);
+  }
 }
 
 // --- OWNER view ---
@@ -259,7 +340,8 @@ function renderOwner(ownerIdentity) {
   if (ownerIdentity) $("ownerInput").value = ownerIdentity;
 
   if (!ownerIdentity) {
-    $("ownerEmpty").textContent = "Skriv en owner_identity i feltet over, eller klikk en eier fra Nå-status/historikk.";
+    $("ownerEmpty").textContent =
+      "Skriv en owner_identity i feltet over, eller klikk en eier fra Nå-status/historikk.";
     return;
   }
 
@@ -309,55 +391,52 @@ function renderOwner(ownerIdentity) {
   }
 
   const hist = execAll(`
-  SELECT
-    permit_key,
-    valid_from,
-    valid_to,
-    COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
-    owner_name,
-    owner_orgnr,
-    tidsbegrenset
-  FROM ownership_history
-  WHERE owner_identity = ?
-  ORDER BY permit_key, date(valid_from), id;
-`, [ownerIdentity]);
+    SELECT
+      permit_key,
+      valid_from,
+      valid_to,
+      COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
+      owner_name,
+      owner_orgnr,
+      tidsbegrenset
+    FROM ownership_history
+    WHERE owner_identity = ?
+    ORDER BY permit_key, date(valid_from), id;
+  `, [ownerIdentity]);
 
-const histBody = $("ownerHistoryTable").querySelector("tbody");
-histBody.innerHTML = "";
+  const histBody = $("ownerHistoryTable").querySelector("tbody");
+  histBody.innerHTML = "";
 
-// Vi trenger å vite om en periode har "neste periode" for samme permit_key
-for (let i = 0; i < hist.length; i++) {
-  const r = hist[i];
-  const next = hist[i + 1] || null;
+  for (let i = 0; i < hist.length; i++) {
+    const r = hist[i];
+    const next = hist[i + 1] || null;
 
-  const validTo = (r.valid_to && String(r.valid_to).trim()) ? String(r.valid_to).trim() : null;
-  const tids = (r.tidsbegrenset && String(r.tidsbegrenset).trim()) ? String(r.tidsbegrenset).trim() : null;
+    const validTo = iso10(r.valid_to);
+    const tb = iso10(r.tidsbegrenset);
+    const hasNextSamePermit = Boolean(next && next.permit_key === r.permit_key);
 
-  const hasNextSamePermit = Boolean(next && next.permit_key === r.permit_key);
+    let reason = "";
+    if (!validTo) {
+      reason = "";
+    } else if (tb && tb === validTo) {
+      reason = `Utløpt (tidsbegrenset ${tb})`;
+    } else if (hasNextSamePermit) {
+      reason = "Overført / ny periode";
+    } else {
+      reason = "Avsluttet";
+    }
 
-  let reason = "";
-  if (!validTo) {
-    reason = ""; // aktiv periode
-  } else if (tids && tids.slice(0, 10) === validTo.slice(0, 10)) {
-    reason = `Utløpt (tidsbegrenset ${tids.slice(0, 10)})`;
-  } else if (hasNextSamePermit) {
-    reason = "Overført / ny periode";
-  } else {
-    reason = "Avsluttet";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${escapeHtml(r.permit_key)}</a></td>
+      <td>${escapeHtml(r.valid_from)}</td>
+      <td>${escapeHtml(r.valid_to_label)}</td>
+      <td class="muted">${escapeHtml(reason)}</td>
+      <td>${escapeHtml(r.owner_name)}</td>
+      <td>${escapeHtml(r.owner_orgnr || "")}</td>
+    `;
+    histBody.appendChild(tr);
   }
-
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${escapeHtml(r.permit_key)}</a></td>
-    <td>${escapeHtml(r.valid_from)}</td>
-    <td>${escapeHtml(r.valid_to_label)}</td>
-    <td class="muted">${escapeHtml(reason)}</td>
-    <td>${escapeHtml(r.owner_name)}</td>
-    <td>${escapeHtml(r.owner_orgnr || "")}</td>
-  `;
-  histBody.appendChild(tr);
-}
-
 }
 
 // --- routing ---
@@ -365,16 +444,13 @@ function parseHash() {
   const h = (location.hash || "#/now").replace(/^#\/?/, "");
   const parts = h.split("/").filter(Boolean);
 
-  // "now"
   if (parts.length === 0 || parts[0] === "now") return { view: "now" };
 
-  // "permit" or "permit/<key>"
   if (parts[0] === "permit") {
     const key = parts[1] ? decodeURIComponent(parts[1]) : null;
     return { view: "permit", key };
   }
 
-  // "owner" or "owner/<identity>"
   if (parts[0] === "owner") {
     const ident = parts[1] ? decodeURIComponent(parts[1]) : null;
     return { view: "owner", ident };
@@ -385,7 +461,6 @@ function parseHash() {
 
 function renderRoute() {
   if (!db) return;
-
   const r = parseHash();
   if (r.view === "now") return renderNow();
   if (r.view === "permit") return renderPermit(r.key);
@@ -397,8 +472,26 @@ function renderRoute() {
 function wireEvents() {
   window.addEventListener("hashchange", () => renderRoute());
 
-  $("nowSearch").addEventListener("input", () => renderNow());
+  // NOW search (debounced)
+  let nowTimer = null;
+  $("nowSearch").addEventListener("input", () => {
+    clearTimeout(nowTimer);
+    nowTimer = setTimeout(() => renderNow(), 80);
+  });
   $("onlyGrunnrente").addEventListener("change", () => renderNow());
+
+  // NOW sorting via data-sort headers (safe even if headers don't have data-sort)
+  document.querySelectorAll("#nowTable thead th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.getAttribute("data-sort");
+      if (!key) return;
+
+      if (sortState.now.key === key) sortState.now.dir *= -1;
+      else { sortState.now.key = key; sortState.now.dir = 1; }
+
+      renderNow();
+    });
+  });
 
   $("permitGo").addEventListener("click", () => {
     const key = $("permitInput").value.trim();
@@ -425,6 +518,7 @@ function showError(err) {
   setMeta(String(err?.message || err));
 }
 
+// --- main ---
 (async function main() {
   wireEvents();
   if (!location.hash) toHashNow();
