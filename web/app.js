@@ -71,7 +71,8 @@ async function loadDatabase() {
   }
 
   // fetch sqlite
-  const res = await fetch(DB_URL, { cache: "no-store" });
+  const res = await fetch(`${DB_URL}?v=${Date.now()}`, { cache: "no-store" });
+
   if (!res.ok) throw new Error(`Kunne ikke hente ${DB_URL} (HTTP ${res.status})`);
   const buf = await res.arrayBuffer();
 

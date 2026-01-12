@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from src.config import PROJECT_ROOT
 
 def main() -> None:

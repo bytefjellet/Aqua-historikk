@@ -1,14 +1,15 @@
-name: Deploy GitHub Pages
+name: "Deploy GitHub Pages"
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - "main"
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: "read"
+  pages: "write"
+  id-token: "write"
 
 concurrency:
   group: "pages"
@@ -16,24 +17,26 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: "Checkout"
+        uses: "actions/checkout@v4"
 
-      - name: Sanity check: web + DB exists
+      - name: "Sanity check: web + DB exists"
+        shell: "bash"
         run: |
-          test -f web/index.html
-          test -f web/app.js
-          test -f web/style.css
-          test -f web/data/aqua.sqlite
-          ls -lah web/data/aqua.sqlite
+          set -euo pipefail
+          test -f "web/index.html"
+          test -f "web/app.js"
+          test -f "web/style.css"
+          test -f "web/data/aqua.sqlite"
+          ls -lah "web/data/aqua.sqlite"
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: "Upload Pages artifact"
+        uses: "actions/upload-pages-artifact@v3"
         with:
-          path: web
+          path: "web"
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: "Deploy to GitHub Pages"
+        id: "deployment"
+        uses: "actions/deploy-pages@v4"
