@@ -1,0 +1,97 @@
+date: invalid argument 's' for -I
+==>  Runner start
+./scripts/run_daily_runner.sh: line 22: /usr/bin/flock: No such file or directory
+date: invalid argument 's' for -I
+!!  Another run is already running. Exiting.
+==> 2026-01-12T20:46:29+0100 Runner start
+Finnes allerede: 2026-01-12 - Uttrekk fra Akvakulturregisteret.csv
+
+Preflight: sjekket 23 filer.
+
+WARN (23):
+ - 2025-12-21 - Uttrekk fra Akvakulturregisteret.csv: Fant 25032 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-22 - Uttrekk fra Akvakulturregisteret.csv: Fant 25032 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-23 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-24 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-25 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-26 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-27 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-28 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-29 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-30 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2025-12-31 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-01 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-02 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-03 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-04 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-05 - Uttrekk fra Akvakulturregisteret.csv: Fant 25038 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-06 - Uttrekk fra Akvakulturregisteret.csv: Fant 25478 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-07 - Uttrekk fra Akvakulturregisteret.csv: Fant 25487 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-08 - Uttrekk fra Akvakulturregisteret.csv: Fant 25397 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-09 - Uttrekk fra Akvakulturregisteret.csv: Fant 25397 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-10 - Uttrekk fra Akvakulturregisteret.csv: Fant 25406 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-11 - Uttrekk fra Akvakulturregisteret.csv: Fant 25406 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+ - 2026-01-12 - Uttrekk fra Akvakulturregisteret.csv: Fant 25406 rader med duplisert TILL_NR. Dette er normalt om tillatelser har flere lokaliteter, men 'permit_snapshot' lagrer kun én representativ rad per TILL_NR per dag.
+Prosesserer 2025-12-21 - 2025-12-21 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-21: tillatelser=3023 new=3023 removed=0 owner_changes=0 snapshots_written=3023 skipped=0
+Prosesserer 2025-12-22 - 2025-12-22 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-22: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2025-12-23 - 2025-12-23 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-23: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=9 skipped=3014
+Prosesserer 2025-12-24 - 2025-12-24 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-24: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2025-12-25 - 2025-12-25 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-25: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2025-12-26 - 2025-12-26 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-26: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2025-12-27 - 2025-12-27 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-27: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2025-12-28 - 2025-12-28 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-28: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2025-12-29 - 2025-12-29 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-29: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=1 skipped=3022
+Prosesserer 2025-12-30 - 2025-12-30 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-30: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=1 skipped=3022
+Prosesserer 2025-12-31 - 2025-12-31 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2025-12-31: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2026-01-01 - 2026-01-01 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-01: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=1 skipped=3022
+Prosesserer 2026-01-02 - 2026-01-02 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-02: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=1 skipped=3022
+Prosesserer 2026-01-03 - 2026-01-03 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-03: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2026-01-04 - 2026-01-04 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-04: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=1 skipped=3022
+Prosesserer 2026-01-05 - 2026-01-05 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-05: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2026-01-06 - 2026-01-06 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-06: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=12 skipped=3011
+Prosesserer 2026-01-07 - 2026-01-07 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-07: tillatelser=3023 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=3023
+Prosesserer 2026-01-08 - 2026-01-08 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-08: tillatelser=2987 new=0 removed=36 owner_changes=0 snapshots_written=2 skipped=2985
+Prosesserer 2026-01-09 - 2026-01-09 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-09: tillatelser=2987 new=0 removed=0 owner_changes=15 snapshots_written=16 skipped=2971
+Prosesserer 2026-01-10 - 2026-01-10 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-10: tillatelser=2987 new=0 removed=0 owner_changes=0 snapshots_written=7 skipped=2980
+Prosesserer 2026-01-11 - 2026-01-11 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-11: tillatelser=2987 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=2987
+Prosesserer 2026-01-12 - 2026-01-12 - Uttrekk fra Akvakulturregisteret.csv
+  Stats 2026-01-12: tillatelser=2987 new=0 removed=0 owner_changes=0 snapshots_written=0 skipped=2987
+
+Ferdig. Historikk + snapshots er bygget.
+Using database: [<sqlite3.Row object at 0x1095579a0>]
+
+DB Validation Report
+------------------------------------------------------------
+OK    Duplikatperioder i ownership_history (per owner_identity): 0
+OK    Negative perioder (valid_to < valid_from): 0
+OK    Flere aktive perioder per permit: 0
+OK    Overlapp i ownership_history per permit: 0
+OK    permit_current matcher aktiv ownership_history (owner_identity): 0
+OK    permit_current.snapshot_date etter siste snapshots.snapshot_date: 0
+------------------------------------------------------------
+All critical checks passed ✅
+Copied /Users/torsteinulvik/Documents/Aqua-historikk/db/aqua.sqlite -> /Users/torsteinulvik/Documents/Aqua-historikk/web/data/aqua.sqlite (6463488 bytes)
+==> 2026-01-12T20:46:49+0100 Runner done
+==> 2026-01-12T20:46:49+0100 Lock released

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT="/Users/torsteinulvik/Documents/Aqua-historikk"
+RUN_SCRIPT="$PROJECT_ROOT/run_daily.sh"
+
+LOG_DIR="$PROJECT_ROOT/logs"
+mkdir -p "$LOG_DIR"
+
+STAMP="$(date +%Y-%m-%d)"
+LOG_FILE="$LOG_DIR/run_daily_${STAMP}.log"
+
+LOCK_FILE="/tmp/aqua_historikk_run_daily.lock"
+
+# Send ALL output (stdout + stderr) både til skjerm og loggfil
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+echo "==> $(date -Is) Runner start"
+cd "$PROJECT_ROOT"
+
+# Kjør bare hvis ingen annen kjøring pågår
+if ! /usr/bin/flock -n "$LOCK_FILE" -c "$RUN_SCRIPT"; then
+  echo "!! $(date -Is) Another run is already running. Exiting."
+  exit 0
+fi
+
+echo "==> $(date -Is) Runner done"
+
