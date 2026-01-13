@@ -27,9 +27,15 @@ function $(id) { return document.getElementById(id); }
 function setStatus(text, kind) {
   const el = $("dbStatus");
   el.textContent = text;
+
+  // sørg for at det alltid ser ut som en pill
+  el.classList.add("pill");
+
+  // statusfarger (valgfritt)
   el.classList.remove("ok", "warn", "bad");
   if (kind) el.classList.add(kind);
 }
+
 
 function setMeta(text) {
   $("dbMeta").textContent = text || "";
@@ -142,6 +148,8 @@ const sortState = {
 // --- load db ---
 async function loadDatabase() {
   setStatus("Laster database…");
+  console.log("DB lastet – setStatus kjørt");
+
   setMeta("");
 
 
