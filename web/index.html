@@ -68,11 +68,33 @@
         <button id="permitGo" class="button" type="button">Søk</button>
       </div>
 
-      <div id="permitCard" class="card hidden"></div>
+      <div class="split">
+      <div class="split-left">
+        <div id="permitCard" class="card hidden"></div>
+      </div>
 
-      <h3>Historikk</h3>
-      <div class="table-wrap">
-        <table class="table" id="permitHistoryTable">
+      <div class="split-right">
+        <h3>Historikk</h3>
+        <div class="table-wrap">
+          <table class="table" id="permitHistoryTable">
+            <thead>
+              <tr>
+                <th>Gyldig fra</th>
+                <th>Gyldig til</th>
+                <th>Årsak</th>
+                <th>Eier</th>
+                <th>Org.nr.</th>
+                <th>Org.nr</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="permitEmpty" class="muted"></div>
+      </div>
+    </div>
+
           <thead>
             <tr>
               <th>Gyldig fra</th>
@@ -99,43 +121,49 @@
         <button id="ownerGo" class="button" type="button">Søk</button>
       </div>
 
-      <div id="ownerCard" class="card hidden"></div>
+      <div class="split">
+  <div class="split-left">
+    <div id="ownerCard" class="card hidden"></div>
+    <div id="ownerEmpty" class="muted"></div>
+  </div>
 
-      <h3>Aktive tillatelser nå</h3>
-      <div class="table-wrap">
-        <table class="table" id="ownerActiveTable">
-          <thead>
-            <tr>
-              <th>Tillatelse</th>
-              <th>Art</th>
-              <th>Formål</th>
-              <th>Produksjonsstadium</th>
-              <th>Tillatelseskapasitet</th>
-              <th>Produksjonsområde</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <div class="split-right">
+    <h3>Aktive tillatelser nå</h3>
+    <div class="table-wrap">
+      <table class="table" id="ownerActiveTable">
+        <thead>
+          <tr>
+            <th>Tillatelse</th>
+            <th>Art</th>
+            <th>Formål</th>
+            <th>Produksjonsstadium</th>
+            <th>Tillatelseskapasitet</th>
+            <th>Produksjonsområde</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-      <h3>Historikk (alle perioder)</h3>
-      <div class="table-wrap">
-        <table class="table" id="ownerHistoryTable">
-          <thead>
-            <tr>
-              <th>Tillatelse</th>
-              <th>Gyldig fra</th>
-              <th>Gyldig til</th>
-              <th>Årsak</th>
-              <th>Eiernavn</th>
-              <th>Org.nr</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+    <h3 style="margin-top:18px">Historikk (alle perioder)</h3>
+    <div class="table-wrap">
+      <table class="table" id="ownerHistoryTable">
+        <thead>
+          <tr>
+            <th>Tillatelse</th>
+            <th>Gyldig fra</th>
+            <th>Gyldig til</th>
+            <th>Årsak</th>
+            <th>Eiernavn</th>
+            <th>Org.nr</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-      <div id="ownerEmpty" class="muted"></div>
     </section>
   </main>
 

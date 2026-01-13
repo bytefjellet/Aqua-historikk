@@ -1,127 +1,177 @@
-/* --- Visuell oppgradering (legg nederst) --- */
+/* =========================
+   Ekstra minimalistisk lyst tema
+   (outline button + “flat” tabell)
+   Lim inn nederst i style.css
+   ========================= */
 
 :root{
-  /* hvis du allerede har variabler, behold dine – dette er “nice defaults” */
-  --bg: #0b1220;
-  --panel: rgba(255,255,255,.06);
-  --panel2: rgba(255,255,255,.09);
-  --line: rgba(255,255,255,.12);
-  --text: rgba(255,255,255,.92);
-  --muted: rgba(255,255,255,.65);
-  --accent: #7dd3fc;  /* lys cyan */
-  --accent2: #a78bfa; /* lilla */
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --panel2: #f7f7f8;
+  --text: #0f172a;     /* slate-900 */
+  --muted: #64748b;    /* slate-500 */
+  --line: #e2e8f0;     /* slate-200 */
+  --accent: #2563eb;   /* blue-600 */
+  --accentSoft: rgba(37,99,235,.10);
 }
 
+/* Base */
+html, body{ background: var(--bg); color: var(--text); }
 body{
-  background:
-    radial-gradient(900px 500px at 15% 10%, rgba(125,211,252,.18), transparent 55%),
-    radial-gradient(800px 520px at 85% 0%, rgba(167,139,250,.16), transparent 55%),
-    linear-gradient(180deg, var(--bg), #070b14);
-  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Topbar (lav) */
 .topbar{
-  backdrop-filter: blur(10px);
-  background: rgba(0,0,0,.18);
+  padding-block: 10px;
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
 
 .title{
-  letter-spacing: .2px;
+  font-weight: 650;
+  letter-spacing: .15px;
+  font-size: 16px;
+}
+.subtitle{
+  color: var(--muted);
+  font-size: 12px;
 }
 
-.container{
-  max-width: 1100px;
+/* Status */
+.pill{
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--muted);
 }
+.pill.ok{ border-color: rgba(16,185,129,.35); color: #065f46; }
+.pill.warn{ border-color: rgba(245,158,11,.35); color: #92400e; }
+.pill.bad{ border-color: rgba(239,68,68,.40); color: #991b1b; }
 
-/* Tabs: “pill underline” */
+.muted{ color: var(--muted); }
+
+/* Tabs (enkle “chips”) */
 .tabs{
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(0,0,0,.18);
-  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
+  padding: 8px 0;
 }
 
 .tab{
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  padding: 8px 12px;
+  margin-right: 6px;
   border-radius: 999px;
   color: var(--muted);
-  transition: transform .05s ease, background .15s ease, color .15s ease;
+  text-decoration: none;
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+  border: 1px solid transparent;
 }
 
 .tab:hover{
-  background: rgba(255,255,255,.06);
+  background: var(--panel2);
   color: var(--text);
 }
 
 .tab.active{
+  background: transparent;
+  border-color: var(--line);
   color: var(--text);
-  background: linear-gradient(90deg, rgba(125,211,252,.18), rgba(167,139,250,.16));
-  border: 1px solid rgba(255,255,255,.14);
 }
 
-/* Inputs og buttons */
-.input, .button{
-  border-radius: 12px;
-}
-
+/* Controls */
 .input{
-  background: rgba(255,255,255,.06);
+  background: #fff;
   border: 1px solid var(--line);
+  border-radius: 12px;
   color: var(--text);
 }
+
+.input::placeholder{ color: #94a3b8; } /* slate-400 */
 
 .input:focus{
   outline: none;
-  box-shadow: 0 0 0 3px rgba(125,211,252,.18);
-  border-color: rgba(125,211,252,.35);
+  border-color: rgba(37,99,235,.45);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.10);
 }
 
+/* Outline button (minimal) */
 .button{
-  background: linear-gradient(90deg, rgba(125,211,252,.22), rgba(167,139,250,.20));
-  border: 1px solid rgba(255,255,255,.14);
+  background: transparent;
   color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: background .12s ease, border-color .12s ease;
 }
 
 .button:hover{
-  filter: brightness(1.05);
+  background: var(--panel2);
+  border-color: #cbd5e1; /* litt mørkere line */
 }
 
-/* Card: mer dybde */
+.button:active{
+  background: #f1f5f9;
+}
+
+/* Cards: veldig flat */
 .card{
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(0,0,0,.28);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: none;
 }
 
-/* Table: zebra + hover */
+/* Tabell: ingen “boks” rundt */
+.table-wrap{
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Tabell: rene linjer */
 .table{
-  border-collapse: separate;
-  border-spacing: 0;
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
 }
 
 .table thead th{
-  background: rgba(255,255,255,.08);
-  backdrop-filter: blur(6px);
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12.5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
-.table tbody tr:nth-child(even){
-  background: rgba(255,255,255,.03);
+.table td{
+  border-bottom: 1px solid var(--line);
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
-.table tbody tr:hover{
-  background: rgba(125,211,252,.08);
+.table tbody tr:hover td{
+  background: #fafafa;
 }
 
-/* Sticky header: litt skygge */
-.table thead th{
-  box-shadow: 0 1px 0 rgba(255,255,255,.08);
+/* Sorteringspil: ekstra diskret */
+th.sort-asc::after, th.sort-desc::after{
+  font-size: 10px;
+  opacity: .7;
 }
 
 /* Lenker */
@@ -129,19 +179,56 @@ body{
   color: var(--accent);
   text-decoration: none;
 }
+.link:hover{ text-decoration: underline; }
 
-.link:hover{
-  text-decoration: underline;
+/* Footer */
+.footer{
+  border-top: 1px solid var(--line);
+  background: #fff;
 }
 
-/* Status-pill: litt “badge”-feel */
-.pill{
-  border-radius: 999px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
+/* Mobil */
+@media (max-width: 700px){
+  .tabs{ overflow-x: auto; }
+  .tab{ white-space: nowrap; }
 }
 
-.pill.ok{ border-color: rgba(34,197,94,.35); }
-.pill.warn{ border-color: rgba(234,179,8,.35); }
-.pill.bad{ border-color: rgba(239,68,68,.40); }
+/* =========================
+   Split-layout (2 kolonner på desktop)
+   Lim inn nederst i style.css
+   ========================= */
+
+.split{
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 18px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.split-left{
+  position: sticky;
+  top: 64px; /* juster hvis tabs/topbar er høyere */
+  align-self: start;
+  display: grid;
+  gap: 12px;
+}
+
+.split-right{
+  min-width: 0; /* viktig for at tabeller ikke sprenger grid */
+}
+
+/* Gjør cards litt “kompakte” */
+.card{
+  padding: 14px 14px;
+}
+
+/* På mobil: én kolonne */
+@media (max-width: 900px){
+  .split{
+    grid-template-columns: 1fr;
+  }
+  .split-left{
+    position: static;
+  }
+}
