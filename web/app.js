@@ -136,9 +136,10 @@ function renderNow() {
   const only = $("onlyGrunnrente").checked;
 
   const baseSql = `
-    SELECT permit_key, owner_name, owner_identity, owner_orgnr, snapshot_date, grunnrente_pliktig
+    SELECT permit_key, owner_name, owner_identity, owner_orgnr
     FROM permit_current
     ${only ? "WHERE grunnrente_pliktig = 1" : ""}
+    ORDER BY permit_key
   `;
   const rows = execAll(baseSql);
 
@@ -151,11 +152,6 @@ function renderNow() {
       )
     : rows;
 
-  // sort
-  const { key, dir } = sortState.now;
-  filtered.sort((ra, rb) => dir * compare(ra[key], rb[key]));
-  setSortIndicator("nowTable", key, dir);
-
   $("nowSummary").textContent =
     `Viser ${filtered.length} av ${rows.length} tillatelser` + (only ? " (grunnrentepliktig)" : "");
 
@@ -167,29 +163,16 @@ function renderNow() {
 
   for (const r of displayRows) {
     const tr = document.createElement("tr");
-    tr.classList.add("rowlink");
 
-    const permit = escapeHtml(r.permit_key);
-    const ownerName = escapeHtml(r.owner_name);
     const orgnrOrIdent = (r.owner_orgnr && String(r.owner_orgnr).trim())
       ? String(r.owner_orgnr).trim()
       : String(r.owner_identity ?? "");
 
-    const snap = escapeHtml(r.snapshot_date || "");
-    const gr = Number(r.grunnrente_pliktig) === 1 ? "1" : "0";
-
     tr.innerHTML = `
-      <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${permit}</a></td>
-      <td>${ownerName}</td>
+      <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${escapeHtml(r.permit_key)}</a></td>
+      <td>${escapeHtml(r.owner_name)}</td>
       <td><a class="link" href="#/owner/${encodeURIComponent(r.owner_identity)}">${escapeHtml(orgnrOrIdent)}</a></td>
-      <td class="muted">${snap}</td>
-      <td>${gr}</td>
     `;
-
-    tr.addEventListener("click", (e) => {
-      if (e.target && e.target.closest("a")) return;
-      toHashPermit(r.permit_key);
-    });
 
     tbody.appendChild(tr);
   }
@@ -197,13 +180,14 @@ function renderNow() {
   if (filtered.length > MAX) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td colspan="5" class="muted">
+      <td colspan="3" class="muted">
         Viser kun de første ${MAX} radene. Begrens søket for å se resten.
       </td>
     `;
     tbody.appendChild(tr);
   }
 }
+
 
 // --- PERMIT view ---
 function renderPermit(permitKey) {
@@ -372,23 +356,46 @@ function renderOwner(ownerIdentity) {
   `;
 
   const active = execAll(`
-    SELECT permit_key, owner_name, snapshot_date, grunnrente_pliktig
-    FROM permit_current
-    WHERE owner_identity = ?
-    ORDER BY permit_key;
-  `, [ownerIdentity]);
+  SELECT permit_key, row_json
+  FROM permit_current
+  WHERE owner_identity = ?
+  ORDER BY permit_key;
+`, [ownerIdentity]);
 
-  const activeBody = $("ownerActiveTable").querySelector("tbody");
-  for (const r of active) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${escapeHtml(r.permit_key)}</a></td>
-      <td>${escapeHtml(r.owner_name)}</td>
-      <td>${escapeHtml(r.snapshot_date)}</td>
-      <td>${Number(r.grunnrente_pliktig) === 1 ? "1" : "0"}</td>
-    `;
-    activeBody.appendChild(tr);
+const activeBody = $("ownerActiveTable").querySelector("tbody");
+activeBody.innerHTML = "";
+
+for (const r of active) {
+  let rowDict = {};
+  try {
+    rowDict = r.row_json ? JSON.parse(r.row_json) : {};
+  } catch (e) {
+    rowDict = {};
   }
+
+  const art = rowDict["ART"] ?? "";
+  const formal = rowDict["FORMÅL"] ?? "";
+  const produksjonsform = rowDict["PRODUKSJONSFORM"] ?? "";
+  const kap = rowDict["TILL_KAP"] ?? "";
+  const enh = rowDict["TILL_ENHET"] ?? "";
+  const prodOmr = rowDict["PROD_OMR"] ?? "";
+
+  const kapasitet = String(kap).trim()
+    ? `${String(kap).trim()}${String(enh).trim() ? " " + String(enh).trim() : ""}`
+    : "";
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${escapeHtml(r.permit_key)}</a></td>
+    <td>${escapeHtml(art)}</td>
+    <td>${escapeHtml(formal)}</td>
+    <td>${escapeHtml(produksjonsform)}</td>
+    <td>${escapeHtml(kapasitet)}</td>
+    <td>${escapeHtml(prodOmr)}</td>
+  `;
+  activeBody.appendChild(tr);
+}
+
 
   const hist = execAll(`
     SELECT
