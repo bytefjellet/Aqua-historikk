@@ -294,3 +294,11 @@ a:visited { color: inherit; }
 
   white-space: nowrap;
 }
+/* Sticky tabs (tving) */
+.tabs {
+  position: sticky !important;
+  top: 0;
+  z-index: 999 !important;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
