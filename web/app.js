@@ -121,6 +121,10 @@ async function loadDatabase() {
   if (db) db.close();
   db = new SQL.Database(new Uint8Array(buf));
 
+  console.log("permit_current columns:", execAll("PRAGMA table_info(permit_current);"));
+  console.log("permit_snapshot columns:", execAll("PRAGMA table_info(permit_snapshot);"));
+
+
   const snap = one(`SELECT MAX(snapshot_date) AS max_date, COUNT(*) AS n FROM snapshots;`);
   const pc = one(`SELECT COUNT(*) AS n FROM permit_current;`);
   const oh = one(`SELECT COUNT(*) AS n FROM ownership_history;`);
