@@ -25,7 +25,7 @@
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Navigasjon">
-    <a id="tab-now" class="tab" href="#/now" role="tab">Nå-status</a>
+    <a id="tab-now" class="tab" href="#/now" role="tab">Gjeldende status</a>
     <a id="tab-permit" class="tab" href="#/permit" role="tab">Tillatelse</a>
     <a id="tab-owner" class="tab" href="#/owner" role="tab">Eier</a>
   </nav>
@@ -33,7 +33,7 @@
   <main class="container">
     <!-- NOW -->
     <section id="view-now" class="view">
-      <h2>Nå-status</h2>
+      <h2>Gjeldende status</h2>
 
       <div class="controls">
         <input id="nowSearch" class="input" placeholder="Søk: orgn.nr eller tillatelsesnr. …" />
@@ -64,8 +64,8 @@
       <h2>Tillatelse</h2>
 
       <div class="controls">
-        <input id="permitInput" class="input" placeholder="Skriv permit_key (f.eks. H-F-0910) …" />
-        <button id="permitGo" class="button" type="button">Åpne</button>
+        <input id="permitInput" class="input" placeholder="Skriv tillatelsesnr. (f.eks. H-F-0910) …" />
+        <button id="permitGo" class="button" type="button">Søk</button>
       </div>
 
       <div id="permitCard" class="card hidden"></div>
@@ -92,11 +92,11 @@
 
     <!-- OWNER -->
     <section id="view-owner" class="view">
-      <h2>Eier</h2>
+      <h2>Innehaver</h2>
 
       <div class="controls">
-        <input id="ownerInput" class="input" placeholder="Skriv owner_identity (f.eks. 987… eller PN:Navn) …" />
-        <button id="ownerGo" class="button" type="button">Åpne</button>
+        <input id="ownerInput" class="input" placeholder="Skriv orgn.nr. …" />
+        <button id="ownerGo" class="button" type="button">Søk</button>
       </div>
 
       <div id="ownerCard" class="card hidden"></div>
