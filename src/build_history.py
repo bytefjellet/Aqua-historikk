@@ -518,19 +518,22 @@ def apply_snapshot(
         conn.execute(
             """
             INSERT INTO permit_current(
-                permit_key, owner_orgnr, owner_name, owner_identity, snapshot_date, row_json, grunnrente_pliktig
+                permit_key, owner_orgnr, owner_name, owner_identity, snapshot_date,
+                row_json, grunnrente_pliktig, art
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(permit_key) DO UPDATE SET
                 owner_orgnr=excluded.owner_orgnr,
                 owner_name=excluded.owner_name,
                 owner_identity=excluded.owner_identity,
                 snapshot_date=excluded.snapshot_date,
                 row_json=excluded.row_json,
-                grunnrente_pliktig=excluded.grunnrente_pliktig;
+                grunnrente_pliktig=excluded.grunnrente_pliktig,
+                art=excluded.art;
             """,
-            (permit_key, owner_org or None, owner_name or None, owner_identity, snapshot_date, row_json, grunn),
+            (permit_key, owner_org or None, owner_name or None, owner_identity, snapshot_date, row_json, grunn, art),
         )
+
 
     # 7) Marker snapshot
     conn.execute(

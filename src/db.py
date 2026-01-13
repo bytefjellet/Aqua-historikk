@@ -28,113 +28,132 @@ def init_db(conn: sqlite3.Connection) -> None:
     # ----------------------------
     # snapshots
     # ----------------------------
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS snapshots (
-        snapshot_date TEXT PRIMARY KEY,
-        filename TEXT NOT NULL,
-        ingested_at TEXT NOT NULL
-    );
-    """)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS snapshots (
+            snapshot_date TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            ingested_at TEXT NOT NULL
+        );
+        """
+    )
 
     # ----------------------------
     # permit_current (NOW-state)
     # ----------------------------
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS permit_current (
-        permit_key TEXT PRIMARY KEY,
-        owner_orgnr TEXT,
-        owner_name TEXT,
-        owner_identity TEXT,              -- ALLTID satt i ingest
-        snapshot_date TEXT NOT NULL,
-        row_json TEXT NOT NULL,
-        grunnrente_pliktig INTEGER NOT NULL DEFAULT 0
-    );
-    """)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS permit_current (
+            permit_key TEXT PRIMARY KEY,
+            owner_orgnr TEXT,
+            owner_name TEXT,
+            owner_identity TEXT,              -- ALLTID satt i ingest
+            snapshot_date TEXT NOT NULL,
+            row_json TEXT NOT NULL,
+            art TEXT,                         -- aggregert art-streng (kan inneholde flere arter)
+            grunnrente_pliktig INTEGER NOT NULL DEFAULT 0
+        );
+        """
+    )
 
-    # "migrasjonslight" for eksisterende DB
+    # migrasjoner for eksisterende DB
     _add_column_if_missing(conn, "permit_current", "owner_identity", "TEXT")
     _add_column_if_missing(conn, "permit_current", "grunnrente_pliktig", "INTEGER NOT NULL DEFAULT 0")
+    _add_column_if_missing(conn, "permit_current", "art", "TEXT")
 
-    # Backfill (for safety i eksisterende DB)
-    conn.execute("""
+    # Backfill (sikkerhet)
+    conn.execute(
+        """
         UPDATE permit_current
         SET owner_identity = COALESCE(owner_identity, '')
         WHERE owner_identity IS NULL;
-    """)
+        """
+    )
 
     # ----------------------------
     # permit_snapshot (daily sparse snapshot per permit)
     # ----------------------------
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS permit_snapshot (
-        snapshot_date TEXT NOT NULL,
-        permit_key TEXT NOT NULL,
-        row_json TEXT NOT NULL,
-        row_hash TEXT NOT NULL,
-        PRIMARY KEY (snapshot_date, permit_key)
-    );
-    """)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS permit_snapshot (
+            snapshot_date TEXT NOT NULL,
+            permit_key TEXT NOT NULL,
+            row_json TEXT NOT NULL,
+            row_hash TEXT NOT NULL,
+            art TEXT,
+            PRIMARY KEY (snapshot_date, permit_key)
+        );
+        """
+    )
 
-    # migrasjon: legg til row_hash hvis mangler
+    # migrasjoner
     _add_column_if_missing(conn, "permit_snapshot", "row_hash", "TEXT")
+    _add_column_if_missing(conn, "permit_snapshot", "art", "TEXT")
 
-    # Backfill row_hash hvis du oppgraderer en gammel DB (kan stå tomt – build vil fylle fremover)
-    conn.execute("""
+    # Backfill (sikkerhet)
+    conn.execute(
+        """
         UPDATE permit_snapshot
         SET row_hash = COALESCE(row_hash, '')
         WHERE row_hash IS NULL;
-    """)
+        """
+    )
 
     # ----------------------------
     # ownership_history (SCD2)
     # ----------------------------
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS ownership_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        permit_key TEXT NOT NULL,
-        owner_orgnr TEXT,
-        owner_name TEXT,
-        owner_identity TEXT NOT NULL,     -- ALLTID satt (orgnr eller PN:<name>)
-        valid_from TEXT NOT NULL,
-        valid_to TEXT,
-        tidsbegrenset TEXT                -- NY
-        registered_from TEXT,             -- faktisk registreringsdato (dagbokdato/ajour)
-        registered_to TEXT,               -- valgfritt
-        transfer_id INTEGER               -- peker til license_transfers.id (valgfritt)
-    );
-    """)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ownership_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            permit_key TEXT NOT NULL,
+            owner_orgnr TEXT,
+            owner_name TEXT,
+            owner_identity TEXT NOT NULL,     -- ALLTID satt (orgnr eller PN:<name>)
+            valid_from TEXT NOT NULL,
+            valid_to TEXT,
+            tidsbegrenset TEXT,               -- dato (ISO) hvis tidsbegrenset
+            registered_from TEXT,             -- faktisk registreringsdato (dagbokdato/ajour)
+            registered_to TEXT,               -- valgfritt
+            transfer_id INTEGER               -- peker til license_transfers.id (valgfritt)
+        );
+        """
+    )
 
-    # migrasjoner for eksisterende DB
+    # migrasjoner
     _add_column_if_missing(conn, "ownership_history", "owner_identity", "TEXT")
     _add_column_if_missing(conn, "ownership_history", "registered_from", "TEXT")
     _add_column_if_missing(conn, "ownership_history", "registered_to", "TEXT")
     _add_column_if_missing(conn, "ownership_history", "transfer_id", "INTEGER")
     _add_column_if_missing(conn, "ownership_history", "tidsbegrenset", "TEXT")
 
-
-    # Backfill: owner_identity må aldri være NULL i praksis (validering og unikhet blir rare ellers)
-    conn.execute("""
+    # Backfill
+    conn.execute(
+        """
         UPDATE ownership_history
         SET owner_identity = COALESCE(owner_identity, '')
         WHERE owner_identity IS NULL;
-    """)
+        """
+    )
 
     # ----------------------------
     # license_transfers (API cache)
     # ----------------------------
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS license_transfers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        permit_key TEXT NOT NULL,
-        transfer_key TEXT,              -- hvis API har id/uuid
-        journal_date TEXT,              -- dagbokdato
-        updated_at TEXT,                -- ajourføring/oppdatert
-        current_owner_orgnr TEXT,
-        current_owner_name TEXT,
-        raw_json TEXT NOT NULL,
-        fetched_at TEXT NOT NULL
-    );
-    """)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS license_transfers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            permit_key TEXT NOT NULL,
+            transfer_key TEXT,              -- hvis API har id/uuid
+            journal_date TEXT,              -- dagbokdato
+            updated_at TEXT,                -- ajourføring/oppdatert
+            current_owner_orgnr TEXT,
+            current_owner_name TEXT,
+            raw_json TEXT NOT NULL,
+            fetched_at TEXT NOT NULL
+        );
+        """
+    )
 
     # ----------------------------
     # Indekser
@@ -153,17 +172,20 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_transfers_owner ON license_transfers(current_owner_orgnr, journal_date);")
 
     # Unik indeks: hindrer duplikat-start av samme eierperiode
-    conn.execute("""
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_ownership_period_start
-    ON ownership_history(permit_key, owner_identity, valid_from);
-    """)
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_ownership_period_start
+        ON ownership_history(permit_key, owner_identity, valid_from);
+        """
+    )
 
-    # (Valgfritt, men anbefalt) Hindrer flere aktive perioder per permit
-    # NB: partial indexes støttes av SQLite (3.8.0+).
-    conn.execute("""
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_one_active_ownership_per_permit
-    ON ownership_history(permit_key)
-    WHERE (valid_to IS NULL OR valid_to = '');
-    """)
+    # Hindrer flere aktive perioder per permit (partial unique index)
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_one_active_ownership_per_permit
+        ON ownership_history(permit_key)
+        WHERE (valid_to IS NULL OR valid_to = '');
+        """
+    )
 
     conn.commit()

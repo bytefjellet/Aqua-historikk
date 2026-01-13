@@ -8,7 +8,7 @@ def _env_path(name: str, default: Path) -> Path:
     return Path(v) if v else default
 
 SNAPSHOT_DIR = _env_path("AQUA_SNAPSHOT_DIR", PROJECT_ROOT / "data" / "snapshots")
-DB_PATH = _env_path("AQUA_DB_PATH", PROJECT_ROOT / "db" / "aqua.sqlite")
+DB_PATH = _env_path("AQUA_DB_PATH", PROJECT_ROOT / "data" / "aqua.sqlite")
 
 CSV_SEPARATOR = ";"
 CSV_ENCODING = "utf-8-sig"
