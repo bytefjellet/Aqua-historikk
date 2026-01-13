@@ -2,14 +2,16 @@ name: "Deploy GitHub Pages"
 
 on:
   push:
-    branches:
-      - "main"
+    branches: ["main"]
+    paths:
+      - "web/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
-  contents: "read"
-  pages: "write"
-  id-token: "write"
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: "pages"
@@ -17,13 +19,18 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: "ubuntu-latest"
-    steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v4"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-      - name: "Sanity check: web + DB exists"
-        shell: "bash"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sanity check: web + DB exists
+        shell: bash
         run: |
           set -euo pipefail
           test -f "web/index.html"
@@ -32,11 +39,19 @@ jobs:
           test -f "web/data/aqua.sqlite"
           ls -lah "web/data/aqua.sqlite"
 
-      - name: "Upload Pages artifact"
-        uses: "actions/upload-pages-artifact@v3"
-        with:
-          path: "web"
+      - name: Verify DB schema has art column
+        shell: bash
+        run: |
+          set -euo pipefail
+          sqlite3 "web/data/aqua.sqlite" "PRAGMA table_info(permit_current);" | grep -q '|art|' \
+            && echo "OK: art-kolonne finnes i permit_current" \
+            || (echo "FEIL: art-kolonne mangler i web/data/aqua.sqlite" && exit 1)
 
-      - name: "Deploy to GitHub Pages"
-        id: "deployment"
-        uses: "actions/deploy-pages@v4"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
