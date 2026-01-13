@@ -272,8 +272,8 @@ def print_preflight_report(result: PreflightResult) -> None:
 # Hovedlogikk: bygg DB fra snapshots
 # ----------------------------
 
-TodayTuple = Tuple[str, str, str, str, Optional[str]]
-# (owner_orgnr, owner_name, owner_identity, row_json, tidsbegrenset)
+TodayTuple = Tuple[str, str, str, str, Optional[str], str]
+# (owner_orgnr, owner_name, owner_identity, row_json, tidsbegrenset, art)
 
 
 def apply_snapshot(
@@ -301,6 +301,20 @@ def apply_snapshot(
 
     # 2) Bygg rader
     rows = df.to_dict(orient="records")
+    # Samle alle arter per permit_key (fra alle rader i CSV, ikke bare representativ rad)
+    art_map: Dict[str, set] = {}
+
+    for r in rows:
+        permit_key = normalize_permit_key(as_text(r.get(KEY_COL)))
+        if not permit_key:
+            continue
+
+        a = as_text(r.get("ART"))
+        if not a:
+            continue
+
+        art_map.setdefault(permit_key, set()).add(a)
+
 
     # --- NYTT: tidsbegrenset per permit_key fra ALLE rader ---
     tidsbegrenset_per_permit: Dict[str, Optional[str]] = {}
@@ -354,8 +368,12 @@ def apply_snapshot(
 
         tidsbegrenset = tidsbegrenset_per_permit.get(permit_key)
 
+        # Aggregert art-streng for permit (fra ALLE rader)
+        art = ", ".join(sorted(art_map.get(permit_key, set())))
+
         best_key[permit_key] = k
-        today[permit_key] = (owner_org, owner_name, owner_identity, row_json, tidsbegrenset)
+        today[permit_key] = (owner_org, owner_name, owner_identity, row_json, tidsbegrenset, art)
+
 
     today_keys = set(today.keys())
 
@@ -376,7 +394,8 @@ def apply_snapshot(
     snapshots_written = 0
     snapshots_skipped = 0
 
-    for permit_key, (_org, _name, _ident, row_json, _tb) in today.items():
+    for permit_key, (_org, _name, _ident, row_json, _tb, _art) in today.items():
+
         row_hash = sha256_text(row_json)
         prev_hash = latest_snapshot_hash(conn, permit_key)
         if prev_hash == row_hash:
@@ -439,7 +458,7 @@ def apply_snapshot(
 
     # Nye tillatelser => åpne eierperiode
     for permit_key in sorted(new_keys):
-        owner_org, owner_name, owner_identity, _row_json, tb = today[permit_key]
+        owner_org, owner_name, owner_identity, _row_json, tb, _art = today[permit_key]
         open_new_ownership(permit_key, owner_org, owner_name, owner_identity, tb)
 
     # Fjernede tillatelser => lukk åpen periode
@@ -450,7 +469,7 @@ def apply_snapshot(
     owner_changes = 0
     for permit_key in sorted(common_keys):
         _prev_owner_org, _prev_owner_name, prev_owner_identity = current[permit_key]
-        owner_org, owner_name, owner_identity, _row_json, tb = today[permit_key]
+        owner_org, owner_name, owner_identity, _row_json, tb, _art = today[permit_key]
 
         if owner_identity != prev_owner_identity:
             owner_changes += 1
@@ -479,7 +498,7 @@ def apply_snapshot(
 
     # Generell pass (trygg) for alle tillatelser i dag
     for permit_key in sorted(today_keys):
-        _o, _n, _i, _j, tb = today[permit_key]
+        _o, _n, _i, _j, tb, _art = today[permit_key]
         update_open_tidsbegrenset(permit_key, tb)
 
     # 6) Oppdater permit_current
@@ -487,7 +506,7 @@ def apply_snapshot(
         conn.execute("DELETE FROM permit_current WHERE permit_key = ?;", (permit_key,))
 
     for permit_key in sorted(today_keys):
-        owner_org, owner_name, owner_identity, row_json, _tb = today[permit_key]
+        owner_org, owner_name, owner_identity, row_json, _tb, art = today[permit_key]
 
         try:
             row_dict = json.loads(row_json) if row_json else {}
