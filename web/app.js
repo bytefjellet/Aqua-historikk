@@ -1,13 +1,22 @@
 /* global initSqlJs */
 
 // =========================
-// app.js (full replacement)
+// app.js (full replacement, schema-safe)
+// - Fix: nettsiden krasjer ikke hvis DB på GitHub Pages mangler kolonnen `art`
+// - Fix: datoer vises stabilt (YYYY-MM-DD) i historikk
+// - Bevarer: artsvisning (fallback til row_json["ART"]), tidsbegrenset-logikk, DB-struktur
 // =========================
 
 let SQL = null;
 let db = null;
 
 const DB_URL = "data/aqua.sqlite";
+
+// Schema flags (settes etter DB lastes)
+const schema = {
+  permit_current_has_art: false,
+  permit_snapshot_has_art: false,
+};
 
 // --- helpers ---
 function $(id) { return document.getElementById(id); }
@@ -38,13 +47,17 @@ function toHashOwner(identity) { location.hash = `#/owner/${encodeURIComponent(i
 
 function setActiveTab(tabId) {
   for (const id of ["tab-now", "tab-permit", "tab-owner"]) {
-    $(id).classList.toggle("active", id === tabId);
+    const el = $(id);
+    if (!el) continue;
+    el.classList.toggle("active", id === tabId);
   }
 }
 
 function showView(viewId) {
   for (const id of ["view-now", "view-permit", "view-owner"]) {
-    $(id).style.display = (id === viewId) ? "block" : "none";
+    const el = $(id);
+    if (!el) continue;
+    el.style.display = (id === viewId) ? "block" : "none";
   }
 }
 
@@ -70,38 +83,25 @@ function iso10(s) {
 }
 
 function displayDate(s) {
-  // Trygg visning i UI: YYYY-MM-DD hvis mulig, ellers original
   if (s == null) return "";
-  const i = iso10(s);
-  return i || String(s);
+  return iso10(s) || String(s);
+}
+
+function hasColumn(table, col) {
+  const rows = execAll(`PRAGMA table_info(${table});`);
+  return rows.some(r => String(r.name) === col);
+}
+
+function safeEl(id) {
+  const el = $(id);
+  if (!el) throw new Error(`Mangler element i HTML: #${id}`);
+  return el;
 }
 
 // --- sort state (NOW) ---
 const sortState = {
   now: { key: "permit_key", dir: 1 } // dir: 1 asc, -1 desc
 };
-
-function compare(a, b) {
-  if (a == null && b == null) return 0;
-  if (a == null) return -1;
-  if (b == null) return 1;
-  const as = String(a).toLowerCase();
-  const bs = String(b).toLowerCase();
-  if (as < bs) return -1;
-  if (as > bs) return 1;
-  return 0;
-}
-
-function clearSortIndicators(tableId) {
-  const ths = document.querySelectorAll(`#${tableId} thead th`);
-  ths.forEach(th => th.classList.remove("sort-asc", "sort-desc"));
-}
-
-function setSortIndicator(tableId, key, dir) {
-  clearSortIndicators(tableId);
-  const th = document.querySelector(`#${tableId} thead th[data-sort="${CSS.escape(key)}"]`);
-  if (th) th.classList.add(dir === 1 ? "sort-asc" : "sort-desc");
-}
 
 // --- load db ---
 async function loadDatabase() {
@@ -114,6 +114,7 @@ async function loadDatabase() {
     });
   }
 
+  // Cache-bust (du har allerede dette, beholdt)
   const res = await fetch(`${DB_URL}?v=${Date.now()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Kunne ikke hente ${DB_URL} (HTTP ${res.status})`);
   const buf = await res.arrayBuffer();
@@ -121,18 +122,19 @@ async function loadDatabase() {
   if (db) db.close();
   db = new SQL.Database(new Uint8Array(buf));
 
-  console.log("permit_current columns:", execAll("PRAGMA table_info(permit_current);"));
-  console.log("permit_snapshot columns:", execAll("PRAGMA table_info(permit_snapshot);"));
-
+  // Detect schema (for å unngå "no such column: art" på eldre DB)
+  schema.permit_current_has_art = hasColumn("permit_current", "art");
+  schema.permit_snapshot_has_art = hasColumn("permit_snapshot", "art");
 
   const snap = one(`SELECT MAX(snapshot_date) AS max_date, COUNT(*) AS n FROM snapshots;`);
   const pc = one(`SELECT COUNT(*) AS n FROM permit_current;`);
   const oh = one(`SELECT COUNT(*) AS n FROM ownership_history;`);
 
-  const last = snap?.max_date ? `Sist snapshot: ${snap.max_date}` : "Ingen snapshots";
+  const last = snap?.max_date ? `Sist snapshot: ${displayDate(snap.max_date)}` : "Ingen snapshots";
   setStatus("DB lastet", "ok");
   setMeta(
     `${last} • permit_current: ${pc?.n ?? "?"} • ownership_history: ${oh?.n ?? "?"} • ${Math.round(buf.byteLength / 1024)} KB`
+    + ` • art(pc): ${schema.permit_current_has_art ? "ja" : "nei"} • art(ps): ${schema.permit_snapshot_has_art ? "ja" : "nei"}`
   );
 
   renderRoute();
@@ -143,8 +145,8 @@ function renderNow() {
   setActiveTab("tab-now");
   showView("view-now");
 
-  const q = $("nowSearch").value.trim().toLowerCase();
-  const only = $("onlyGrunnrente").checked;
+  const q = safeEl("nowSearch").value.trim().toLowerCase();
+  const only = safeEl("onlyGrunnrente").checked;
 
   const baseSql = `
     SELECT
@@ -167,10 +169,11 @@ function renderNow() {
       )
     : rows;
 
-  $("nowSummary").textContent =
+  safeEl("nowSummary").textContent =
     `Viser ${filtered.length} av ${rows.length} tillatelser` + (only ? " (grunnrentepliktig)" : "");
 
-  const tbody = $("nowTable").querySelector("tbody");
+  const tbody = safeEl("nowTable").querySelector("tbody");
+  if (!tbody) throw new Error("Mangler <tbody> i #nowTable");
   tbody.innerHTML = "";
 
   const MAX = 2500;
@@ -183,10 +186,19 @@ function renderNow() {
       ? String(r.owner_orgnr).trim()
       : String(r.owner_identity ?? "");
 
+    // Robust: lenk kun hvis owner_identity finnes
+    const ownerIdent = (r.owner_identity && String(r.owner_identity).trim())
+      ? String(r.owner_identity).trim()
+      : "";
+
     tr.innerHTML = `
       <td><a class="link" href="#/permit/${encodeURIComponent(r.permit_key)}">${escapeHtml(r.permit_key)}</a></td>
       <td>${escapeHtml(r.owner_name)}</td>
-      <td><a class="link" href="#/owner/${encodeURIComponent(r.owner_identity)}">${escapeHtml(orgnrOrIdent)}</a></td>
+      <td>${
+        ownerIdent
+          ? `<a class="link" href="#/owner/${encodeURIComponent(ownerIdent)}">${escapeHtml(orgnrOrIdent)}</a>`
+          : `${escapeHtml(orgnrOrIdent)}`
+      }</td>
     `;
 
     tbody.appendChild(tr);
@@ -208,18 +220,20 @@ function renderPermit(permitKey) {
   setActiveTab("tab-permit");
   showView("view-permit");
 
-  $("permitEmpty").textContent = "";
-  $("permitHistoryTable").querySelector("tbody").innerHTML = "";
-  $("permitCard").classList.add("hidden");
-  if (permitKey) $("permitInput").value = permitKey;
+  safeEl("permitEmpty").textContent = "";
+  const pht = safeEl("permitHistoryTable").querySelector("tbody");
+  if (!pht) throw new Error("Mangler <tbody> i #permitHistoryTable");
+  pht.innerHTML = "";
+  safeEl("permitCard").classList.add("hidden");
+  if (permitKey) safeEl("permitInput").value = permitKey;
 
   if (!permitKey) {
-    $("permitEmpty").textContent =
+    safeEl("permitEmpty").textContent =
       "Skriv en permit_key i feltet over, eller klikk en tillatelse fra Nå-status.";
     return;
   }
 
-  // Alias ALT vi bruker i JS (kritisk for sql.js getAsObject keys)
+  // Alias ALT vi bruker, og gjør art schema-safe
   const now = one(`
     SELECT
       permit_key AS permit_key,
@@ -228,13 +242,13 @@ function renderPermit(permitKey) {
       owner_identity AS owner_identity,
       snapshot_date AS snapshot_date,
       grunnrente_pliktig AS grunnrente_pliktig,
-      art AS art,
+      ${schema.permit_current_has_art ? "art AS art" : "NULL AS art"},
       row_json AS row_json
     FROM permit_current
     WHERE permit_key = ?;
   `, [permitKey]);
 
-  // Alias ALT vi bruker i JS (kritisk for dato-feltene)
+  // Alias datoer eksplisitt (schema-safe for sql.js keys)
   const hist = execAll(`
     SELECT
       valid_from AS valid_from,
@@ -250,11 +264,11 @@ function renderPermit(permitKey) {
   `, [permitKey]);
 
   if (!now && hist.length === 0) {
-    $("permitEmpty").textContent = `Fant ikke permit_key: ${permitKey}`;
+    safeEl("permitEmpty").textContent = `Fant ikke permit_key: ${permitKey}`;
     return;
   }
 
-  const card = $("permitCard");
+  const card = safeEl("permitCard");
   card.classList.remove("hidden");
 
   if (now) {
@@ -296,16 +310,19 @@ function renderPermit(permitKey) {
     const maxSnap = one(`SELECT MAX(snapshot_date) AS max_date FROM snapshots;`);
     const maxDate = maxSnap?.max_date ? String(maxSnap.max_date) : "";
 
-    // Hent sist kjente art fra permit_snapshot (lagret ved build) – også for utløpte tillatelser
-    const lastSnap = one(`
-      SELECT art AS art
-      FROM permit_snapshot
-      WHERE permit_key = ?
-      ORDER BY snapshot_date DESC
-      LIMIT 1;
-    `, [permitKey]);
+    // Hent sist kjente art fra permit_snapshot (kun hvis kolonnen finnes)
+    let artText = "";
+    if (schema.permit_snapshot_has_art) {
+      const lastSnap = one(`
+        SELECT art AS art
+        FROM permit_snapshot
+        WHERE permit_key = ?
+        ORDER BY snapshot_date DESC
+        LIMIT 1;
+      `, [permitKey]);
 
-    const artText = (lastSnap?.art && String(lastSnap.art).trim()) ? lastSnap.art : "";
+      artText = (lastSnap?.art && String(lastSnap.art).trim()) ? lastSnap.art : "";
+    }
     const artHtml = artText ? escapeHtml(artText).replaceAll(", ", "<br>") : "";
 
     card.innerHTML = `
@@ -324,7 +341,7 @@ function renderPermit(permitKey) {
   }
 
   // render history table
-  const tbody = $("permitHistoryTable").querySelector("tbody");
+  const tbody = safeEl("permitHistoryTable").querySelector("tbody");
   tbody.innerHTML = "";
 
   for (let i = 0; i < hist.length; i++) {
@@ -366,14 +383,18 @@ function renderOwner(ownerIdentity) {
   setActiveTab("tab-owner");
   showView("view-owner");
 
-  $("ownerEmpty").textContent = "";
-  $("ownerActiveTable").querySelector("tbody").innerHTML = "";
-  $("ownerHistoryTable").querySelector("tbody").innerHTML = "";
-  $("ownerCard").classList.add("hidden");
-  if (ownerIdentity) $("ownerInput").value = ownerIdentity;
+  safeEl("ownerEmpty").textContent = "";
+  const oat = safeEl("ownerActiveTable").querySelector("tbody");
+  if (!oat) throw new Error("Mangler <tbody> i #ownerActiveTable");
+  oat.innerHTML = "";
+  const oht = safeEl("ownerHistoryTable").querySelector("tbody");
+  if (!oht) throw new Error("Mangler <tbody> i #ownerHistoryTable");
+  oht.innerHTML = "";
+  safeEl("ownerCard").classList.add("hidden");
+  if (ownerIdentity) safeEl("ownerInput").value = ownerIdentity;
 
   if (!ownerIdentity) {
-    $("ownerEmpty").textContent =
+    safeEl("ownerEmpty").textContent =
       "Skriv en owner_identity i feltet over, eller klikk en eier fra Nå-status/historikk.";
     return;
   }
@@ -390,11 +411,11 @@ function renderOwner(ownerIdentity) {
   `, [ownerIdentity]);
 
   if (!stats) {
-    $("ownerEmpty").textContent = `Fant ikke owner_identity: ${ownerIdentity}`;
+    safeEl("ownerEmpty").textContent = `Fant ikke owner_identity: ${ownerIdentity}`;
     return;
   }
 
-  const card = $("ownerCard");
+  const card = safeEl("ownerCard");
   card.classList.remove("hidden");
   card.innerHTML = `
     <div><strong>${escapeHtml(stats.owner_name || "(ukjent)")}</strong></div>
@@ -407,18 +428,20 @@ function renderOwner(ownerIdentity) {
   const active = execAll(`
     SELECT
       permit_key AS permit_key,
-      art AS art,
+      ${schema.permit_current_has_art ? "art AS art" : "NULL AS art"},
       row_json AS row_json
     FROM permit_current
     WHERE owner_identity = ?
     ORDER BY permit_key;
   `, [ownerIdentity]);
 
-  const activeBody = $("ownerActiveTable").querySelector("tbody");
+  const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
   activeBody.innerHTML = "";
 
   for (const r of active) {
-    const rowDict = r.row_json ? (() => { try { return JSON.parse(r.row_json); } catch { return {}; } })() : {};
+    const rowDict = r.row_json
+      ? (() => { try { return JSON.parse(r.row_json); } catch { return {}; } })()
+      : {};
 
     const art = (r.art && String(r.art).trim()) ? r.art : (rowDict["ART"] ?? "");
     const formal = rowDict["FORMÅL"] ?? "";
@@ -457,7 +480,7 @@ function renderOwner(ownerIdentity) {
     ORDER BY permit_key, date(valid_from), id;
   `, [ownerIdentity]);
 
-  const histBody = $("ownerHistoryTable").querySelector("tbody");
+  const histBody = safeEl("ownerHistoryTable").querySelector("tbody");
   histBody.innerHTML = "";
 
   for (let i = 0; i < hist.length; i++) {
@@ -530,11 +553,11 @@ function wireEvents() {
 
   // NOW search (debounced)
   let nowTimer = null;
-  $("nowSearch").addEventListener("input", () => {
+  safeEl("nowSearch").addEventListener("input", () => {
     clearTimeout(nowTimer);
     nowTimer = setTimeout(() => renderNow(), 80);
   });
-  $("onlyGrunnrente").addEventListener("change", () => renderNow());
+  safeEl("onlyGrunnrente").addEventListener("change", () => renderNow());
 
   // NOW sorting via data-sort headers (safe even if headers don't have data-sort)
   document.querySelectorAll("#nowTable thead th[data-sort]").forEach(th => {
@@ -549,22 +572,22 @@ function wireEvents() {
     });
   });
 
-  $("permitGo").addEventListener("click", () => {
-    const key = $("permitInput").value.trim();
+  safeEl("permitGo").addEventListener("click", () => {
+    const key = safeEl("permitInput").value.trim();
     if (!key) return;
     toHashPermit(key);
   });
-  $("permitInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") $("permitGo").click();
+  safeEl("permitInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") safeEl("permitGo").click();
   });
 
-  $("ownerGo").addEventListener("click", () => {
-    const ident = $("ownerInput").value.trim();
+  safeEl("ownerGo").addEventListener("click", () => {
+    const ident = safeEl("ownerInput").value.trim();
     if (!ident) return;
     toHashOwner(ident);
   });
-  $("ownerInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") $("ownerGo").click();
+  safeEl("ownerInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") safeEl("ownerGo").click();
   });
 }
 
@@ -576,10 +599,9 @@ function showError(err) {
 
 // --- main ---
 (async function main() {
-  wireEvents();
-  if (!location.hash) toHashNow();
-
   try {
+    wireEvents();
+    if (!location.hash) toHashNow();
     await loadDatabase();
   } catch (e) {
     showError(e);
