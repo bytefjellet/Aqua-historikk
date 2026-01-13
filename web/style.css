@@ -45,7 +45,7 @@ body {
 }
 
 /* =========================
-   Header
+   Header (alignet med main)
    ========================= */
 .topbar {
   background: var(--surface);
@@ -55,68 +55,113 @@ body {
 .topbar-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px 24px 8px;
+  padding: 14px 24px 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .brand .title {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 750;
+  letter-spacing: .2px;
 }
 
-.brand .subtitle {
-  font-size: .85rem;
-  color: var(--muted);
-  margin-top: 2px;
+/* DB-pill til høyre */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .8rem;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Meta-tekst (vi bruker kun "Visningen oppdatert..." + dato) */
+#dbMeta {
+  white-space: nowrap;
 }
 
 /* =========================
-   Tabs – under tittelen, venstrejustert
+   Sticky tabs-rad
    ========================= */
-.tabs {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
+.tabsbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
+.tabs-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 24px;
+
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: flex-start; /* venstrejustert */
+}
+
+/* =========================
+   Tabs: underline-indikator
+   ========================= */
 .tab {
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  position: relative;
+  padding: 6px 2px;
   text-decoration: none;
-  font-weight: 500;
   color: var(--muted);
+  font-weight: 600;
 }
 
 .tab:hover {
-  background: var(--bg);
   color: var(--text);
 }
 
+/* Underline for aktiv tab */
 .tab.active {
-  background: var(--primary-soft);
   color: var(--primary);
 }
 
-/* =========================
-   Status (øverst til høyre)
-   ========================= */
-.status {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px 12px;
-
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+.tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px; /* matcher tabs-inner padding */
+  height: 3px;
+  border-radius: 999px;
+  background: var(--primary);
 }
 
-/* =========================
-   Ikke endre farge på besøkte lenker
-   ========================= */
+/* Ikke endre farge på besøkte lenker */
 a:visited { color: inherit; }
 .tab:visited { color: var(--muted); }
 .tab.active:visited { color: var(--primary); }
 
-
+/* Mobil: wrap tabs pent */
+@media (max-width: 700px) {
+  .tabs-inner {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  #dbMeta {
+    display: none; /* valgfritt: ryddigere mobil */
+  }
+}
 
 
 

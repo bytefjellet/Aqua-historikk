@@ -89,6 +89,15 @@ function displayDate(s) {
   if (s == null) return "";
   return iso10(s) || String(s);
 }
+function formatNorwegianDate(isoDate) {
+  // Forventer f.eks. "2026-01-13"
+  const d = new Date(isoDate + "T00:00:00");
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(d);
+}
 
 function hasColumn(table, col) {
   const rows = execAll(`PRAGMA table_info(${table});`);
@@ -135,6 +144,7 @@ async function loadDatabase() {
   setStatus("Laster database…");
   setMeta("");
 
+
   if (!SQL) {
     SQL = await initSqlJs({
       locateFile: (f) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}`,
@@ -157,12 +167,17 @@ async function loadDatabase() {
   const pc = one(`SELECT COUNT(*) AS n FROM permit_current;`);
   const oh = one(`SELECT COUNT(*) AS n FROM ownership_history;`);
 
-  const last = snap?.max_date ? `Sist snapshot: ${displayDate(snap.max_date)}` : "Ingen snapshots";
   setStatus("DB lastet", "ok");
+
+  const snapIso = snap?.max_date ? String(snap.max_date).slice(0, 10) : "";
+  const snapNo = snapIso ? formatNorwegianDate(snapIso) : "";
+
   setMeta(
-    `${last} • permit_current: ${pc?.n ?? "?"} • ownership_history: ${oh?.n ?? "?"} • ${Math.round(buf.byteLength / 1024)} KB`
-    + ` • art(pc): ${schema.permit_current_has_art ? "ja" : "nei"} • art(ps): ${schema.permit_snapshot_has_art ? "ja" : "nei"}`
+    snapNo
+      ? `Visningen oppdatert mot Akvakulturregisteret: ${snapNo}`
+      : "Visningen oppdatert mot Akvakulturregisteret: (ukjent dato)"
   );
+
 
   renderRoute();
 }

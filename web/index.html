@@ -12,24 +12,27 @@
 </head>
 
 <body>
- <header class="topbar">
+<header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
       <div class="title">Akvakulturregisteret – historikk</div>
     </div>
 
-    <nav class="tabs" role="tablist" aria-label="Navigasjon">
-      <a id="tab-now" class="tab" href="#/now">Gjeldende status</a>
-      <a id="tab-permit" class="tab" href="#/permit">Tillatelse</a>
-      <a id="tab-owner" class="tab" href="#/owner">Eier</a>
-    </nav>
+    <div class="status">
+      <span id="dbStatus" class="pill">Laster database…</span>
+      <span id="dbMeta" class="muted"></span>
+    </div>
   </div>
 
-  <div class="status">
-    <span id="dbStatus" class="pill">DB lastet</span>
-    <span id="dbMeta" class="muted"></span>
-  </div>
+  <nav class="tabs tabsbar" role="tablist" aria-label="Navigasjon">
+    <div class="tabs-inner">
+      <a id="tab-now" class="tab" href="#/now" role="tab">Gjeldende status</a>
+      <a id="tab-permit" class="tab" href="#/permit" role="tab">Tillatelse</a>
+      <a id="tab-owner" class="tab" href="#/owner" role="tab">Eier</a>
+    </div>
+  </nav>
 </header>
+
 
   <main class="container">
     <!-- NOW -->
