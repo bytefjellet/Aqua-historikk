@@ -277,3 +277,20 @@ a:visited { color: inherit; }
 .tab:visited { color: var(--muted); }
 .tab.active:visited { color: var(--primary); }
 .table a, .table a:visited { color: var(--primary); }
+
+/* DB-status som pill (sticky-header-safe) */
+#dbStatus.pill {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  font-size: .8rem;
+  font-weight: 600;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
+  white-space: nowrap;
+}
