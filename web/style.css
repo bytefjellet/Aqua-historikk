@@ -47,13 +47,25 @@ body {
    Topbar / header
    ========================= */
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
+
+.topbar {
+  padding: 16px 0;
+}
+
+.topbar > * {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
 
 .brand .title {
   font-size: 1.2rem;
