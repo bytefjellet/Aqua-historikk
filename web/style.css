@@ -282,3 +282,136 @@ h3 {
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
+/* =========================
+   1) Tabs på samme linje som tittelen
+   (CSS-triks uten HTML-endring)
+   ========================= */
+
+/* Gi headeren litt ekstra "plass" i bunn, siden tabs flyttes opp */
+.topbar {
+  position: relative;
+  padding-bottom: 44px; /* rom for tabs */
+  border-bottom: 1px solid var(--border); /* behold én strek */
+}
+
+/* Tabs blir visuelt en del av headeren */
+.tabs {
+  background: transparent;   /* samme hvite flate som header */
+  border-bottom: none;       /* unngå ekstra strek */
+  max-width: 1200px;
+  margin: 0 auto;
+
+  /* flytt opp og inn i header-linjen */
+  margin-top: -44px;
+
+  /* dette skyver tabs til høyre for tittelen (juster ved behov) */
+  padding: 0 24px 0 360px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* På små skjermer: legg tabs under (pent), ikke press dem inn */
+@media (max-width: 900px) {
+  .topbar { padding-bottom: 12px; }
+  .tabs {
+    margin-top: 8px;
+    padding: 8px 24px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* =========================
+   2) Tittel mer fremtredende
+   ========================= */
+.brand .title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+/* Gjør h2 litt mindre enn tittelen */
+.container h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+}
+
+/* =========================
+   3) Ikke endre farge på besøkte lenker
+   ========================= */
+
+/* Generelle lenker */
+a:visited {
+  color: inherit;
+}
+
+/* Tab-lenker: behold samme farge før/etter klikk */
+.tab,
+.tab:visited {
+  color: var(--muted);
+}
+
+.tab.active,
+.tab.active:visited {
+  color: var(--primary);
+}
+
+/* Hvis du har lenker i tabeller som skal være blå uansett */
+.table a,
+.table a:visited {
+  color: var(--primary);
+}
+/* Header får plass til tabs som flyttes opp */
+.topbar {
+  position: relative;
+  padding-bottom: 44px;              /* plass til tabs-linja */
+  border-bottom: 1px solid var(--border);
+}
+
+/* Tabs flyttes inn i header-området */
+.tabs {
+  background: transparent;
+  border-bottom: none;
+
+  max-width: 1200px;
+  margin: 0 auto;
+  margin-top: -44px;
+
+  /* venstre padding settes automatisk av JS */
+  padding: 0 24px 0 var(--tabs-left, 360px);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mobil: tabs under header (enkelt og robust) */
+@media (max-width: 900px) {
+  .topbar { padding-bottom: 12px; }
+
+  .tabs {
+    margin-top: 8px;
+    padding: 8px 24px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* Tittel større enn h2 */
+.brand .title {
+  font-size: 1.65rem;
+  font-weight: 700;
+}
+
+.container h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+}
+
+/* Besøkte lenker endrer ikke farge */
+a:visited { color: inherit; }
+.tab, .tab:visited { color: var(--muted); }
+.tab.active, .tab.active:visited { color: var(--primary); }
+.table a, .table a:visited { color: var(--primary); }

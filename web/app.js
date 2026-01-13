@@ -709,3 +709,46 @@ function showError(err) {
     showError(e);
   }
 })();
+(function () {
+  function setTabsLeftPadding() {
+    const topbar = document.querySelector(".topbar");
+    const brand = document.querySelector(".topbar .brand");
+    const tabs = document.querySelector(".tabs");
+    if (!topbar || !brand || !tabs) return;
+
+    // Mål brand-bredde + litt luft til tabs
+    const brandRect = brand.getBoundingClientRect();
+
+    // Match container-padding (24px) + avstand mellom brand og tabs
+    const containerPadding = 24;
+    const gap = 24;
+
+    // tabs-left = venstrekant + brand-bredde + gap
+    // (brand starter etter containerPadding i ditt layout)
+    const left = Math.ceil(containerPadding + brandRect.width + gap);
+
+    document.documentElement.style.setProperty("--tabs-left", `${left}px`);
+  }
+
+  // Kjør når DOM er klar
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setTabsLeftPadding);
+  } else {
+    setTabsLeftPadding();
+  }
+
+  // Oppdater ved resize
+  window.addEventListener("resize", setTabsLeftPadding);
+
+  // Oppdater når fonts/layout kan endre seg etter last
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(setTabsLeftPadding).catch(() => {});
+  }
+
+  // Oppdater hvis brand endrer størrelse (f.eks. statuslinje/tekst)
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(setTabsLeftPadding);
+    const brand = document.querySelector(".topbar .brand");
+    if (brand) ro.observe(brand);
+  }
+})();
