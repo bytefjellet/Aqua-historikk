@@ -265,11 +265,14 @@ h3 { margin-bottom: 8px; }
    Footer
    ========================= */
 .footer {
-  margin-top: 40px;
+  max-width: 1200px;
+  margin: 40px auto 0;
   padding: 16px 24px;
+
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: transparent;
 }
+
 
 /* =========================
    Ikke endre farge på besøkte lenker
@@ -321,5 +324,31 @@ a:visited { color: inherit; }
   height: 2px;
   border-radius: 999px;
   background: var(--border);
+}
+/* Permit: få tabelltopp til å starte på samme linje som kortet */
+#view-permit .split-right h3 {
+  display: none;
+}
+/* Piller i kort (status) */
+.pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.pill--green {
+  background: #e7f7ed;
+  color: #0f6a2f;
+}
+
+.pill--blue {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.pill--yellow {
+  background: #fff7ed;
+  color: #b45309;
 }
 

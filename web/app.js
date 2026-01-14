@@ -340,26 +340,54 @@ function renderPermit(permitKey) {
 
   if (now) {
     // art: bruk aggregert DB-kolonne hvis den finnes, ellers fallback til row_json["ART"]
-    let rowDict = {};
-    try { rowDict = now.row_json ? JSON.parse(now.row_json) : {}; } catch (e) { rowDict = {}; }
+    // art: bruk aggregert DB-kolonne hvis den finnes, ellers fallback til row_json["ART"]
+let rowDict = {};
+try { rowDict = now.row_json ? JSON.parse(now.row_json) : {}; } catch (e) { rowDict = {}; }
 
-    const artText = (now.art && String(now.art).trim()) ? now.art : (rowDict["ART"] ?? "");
-    const artHtml = artText ? escapeHtml(artText) : "";
+const artText = (now.art && String(now.art).trim()) ? now.art : (rowDict["ART"] ?? "");
+const artHtml = artText ? escapeHtml(artText) : "";
 
-    card.innerHTML = `
-      <div><strong>${escapeHtml(now.permit_key)}</strong></div>
-      <div class="muted">
-        Snapshot: ${escapeHtml(displayDate(now.snapshot_date))} • Grunnrente: ${Number(now.grunnrente_pliktig) === 1 ? "1" : "0"}
-      </div>
+// Ekstra felt i kortet
+const formal = (rowDict["FORMÅL"] ?? "").toString().trim();
+const produksjonsstadium = (rowDict["PRODUKSJONSSTADIUM"] ?? rowDict["PRODUKSJONSFORM"] ?? "").toString().trim();
 
-      <div style="margin-top:8px">
-        <div><span class="muted">Eier:</span> ${escapeHtml(now.owner_name)}</div>
-        <div><span class="muted">Org.nr.:</span>
-          <a class="link" href="#/owner/${encodeURIComponent(now.owner_identity)}">${escapeHtml(now.owner_identity)}</a>
-        </div>
-        ${artText ? `<div style="margin-top:8px"><span class="muted">Arter:</span> ${artHtml}</div>` : ""}
-      </div>
-    `;
+const kap = (rowDict["TILL_KAP"] ?? "").toString().trim();
+const enh = (rowDict["TILL_ENHET"] ?? "").toString().trim();
+const kapasitet = kap ? `${kap}${enh ? " " + enh : ""}` : "";
+
+const prodOmrRaw = (rowDict["PROD_OMR"] ?? "").toString().trim();
+const prodOmr = prodOmrRaw ? prodOmrRaw : "N/A";
+
+// Grunnrente-pill
+const grunnrente = Number(now.grunnrente_pliktig) === 1;
+const grunnPillClass = grunnrente ? "pill--blue" : "pill--yellow";
+const grunnPillText = grunnrente ? "Grunnrentepliktig" : "Ikke grunnrentepliktig";
+
+card.innerHTML = `
+  <div><strong>${escapeHtml(now.permit_key)}</strong></div>
+
+  <div class="pills">
+    <span class="pill pill--green">Gjeldende status</span>
+    <span class="pill ${grunnPillClass}">${grunnPillText}</span>
+  </div>
+
+  <div style="margin-top:10px">
+    <div><span class="muted">Eier:</span> ${escapeHtml(now.owner_name)}</div>
+    <div><span class="muted">Org.nr.:</span>
+      <a class="link" href="#/owner/${encodeURIComponent(now.owner_identity)}">${escapeHtml(now.owner_identity)}</a>
+    </div>
+
+    ${artText ? `<div style="margin-top:8px"><span class="muted">Arter:</span> ${artHtml}</div>` : ""}
+
+    <div style="margin-top:10px">
+      <div><span class="muted">Formål:</span> ${escapeHtml(formal || "")}</div>
+      <div><span class="muted">Produksjonsstadium:</span> ${escapeHtml(produksjonsstadium || "")}</div>
+      <div><span class="muted">Tillatelseskapasitet:</span> ${escapeHtml(kapasitet || "")}</div>
+      <div><span class="muted">Produksjonsområde:</span> ${escapeHtml(prodOmr)}</div>
+    </div>
+  </div>
+`;
+
   } else {
     // not active in permit_current => show last known from history
     const last = hist[hist.length - 1];
