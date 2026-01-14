@@ -321,6 +321,7 @@ function renderPermit(permitKey) {
   permitKey = keyTrim;
   inputEl.value = permitKey;
   setPermitResultsVisible(true);
+  setPermitEmptyStateVisible(false);
 
 
   // Alias ALT vi bruker, og gjør art schema-safe
