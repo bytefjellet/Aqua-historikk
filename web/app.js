@@ -122,12 +122,20 @@ function isNineDigits(s) {
 }
 
 function clearPermitView() {
+  setPermitResultsVisible(false); // <-- NY
   safeEl("permitEmpty").textContent = "";
   safeEl("permitCard").classList.add("hidden");
   const tbody = safeEl("permitHistoryTable").querySelector("tbody");
   if (!tbody) throw new Error("Mangler <tbody> i #permitHistoryTable");
   tbody.innerHTML = "";
 }
+
+/* NY helper – LEGG DENNE INN */
+function setPermitResultsVisible(visible) {
+  const split = safeEl("view-permit").querySelector(".split");
+  if (split) split.classList.toggle("hidden", !visible);
+}
+
 
 function clearOwnerView() {
   safeEl("ownerEmpty").textContent = "";
@@ -271,6 +279,8 @@ function renderPermit(permitKey) {
   setActiveTab("tab-permit");
   showView("view-permit");
 
+  setPermitResultsVisible(false); 
+
   safeEl("permitEmpty").textContent = "";
   const pht = safeEl("permitHistoryTable").querySelector("tbody");
   if (!pht) throw new Error("Mangler <tbody> i #permitHistoryTable");
@@ -298,6 +308,8 @@ function renderPermit(permitKey) {
 
   permitKey = keyTrim;
   inputEl.value = permitKey;
+  setPermitResultsVisible(true);
+
 
   // Alias ALT vi bruker, og gjør art schema-safe
   const now = one(`
