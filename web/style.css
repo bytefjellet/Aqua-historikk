@@ -396,3 +396,13 @@ a:visited { color: inherit; }
 .empty-text {
   color: #9ca3af;
 }
+.permit-title-link {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.permit-title-link:hover {
+  text-decoration: underline;
+}

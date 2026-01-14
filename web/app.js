@@ -328,6 +328,9 @@ function renderPermit(permitKey) {
   setPermitResultsVisible(true);
   setPermitEmptyStateVisible(false);
 
+  const permitUrl =
+  `https://sikker.fiskeridir.no/akvakulturregisteret/web/licenses/${encodeURIComponent(permitKey)}`;
+
 
   // Alias ALT vi bruker, og gjør art schema-safe
   const now = one(`
@@ -438,7 +441,11 @@ const grunnPillClass = grunnrente ? "pill--blue" : "pill--yellow";
 const grunnPillText = grunnrente ? "Grunnrentepliktig" : "Ikke grunnrentepliktig";
 
 card.innerHTML = `
-  <div><strong>${escapeHtml(now.permit_key)}</strong></div>
+  <div>
+    <a href="${permitUrl}" target="_blank" rel="noopener noreferrer" class="permit-title-link">
+      ${escapeHtml(now.permit_key)}
+    </a>
+  </div>
 
   <div class="pills">
     <span class="pill pill--green">Gjeldende status</span>
@@ -494,7 +501,11 @@ card.innerHTML = `
     const artHtml = artText ? escapeHtml(artText) : "";
 
     card.innerHTML = `
-      <div><strong>${escapeHtml(permitKey)}</strong></div>
+      <div>
+        <a href="${permitUrl}" target="_blank" rel="noopener noreferrer" class="permit-title-link">
+          ${escapeHtml(now.permit_key)}
+        </a>
+      </div>
       <div class="muted">Ikke aktiv i siste snapshot${maxDate ? ` (${escapeHtml(displayDate(maxDate))})` : ""} • ${escapeHtml(endText)}</div>
       <div style="margin-top:8px">
         <div><span class="muted">Siste kjente eier:</span> ${escapeHtml(last.owner_name || "")}</div>
