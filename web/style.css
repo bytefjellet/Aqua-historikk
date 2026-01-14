@@ -351,4 +351,10 @@ a:visited { color: inherit; }
   background: #fff7ed;
   color: #b45309;
 }
+.hidden { display: none !important; }
+
+/* Permit: skjul resultatområdet som default */
+#view-permit .split {
+  display: none;
+}
 
