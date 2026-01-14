@@ -329,6 +329,39 @@ function renderPermit(permitKey) {
     ORDER BY date(valid_from), id;
   `, [permitKey]);
 
+  // Skal vi vise Årsak-kolonnen?
+let showReasonColumn = false;
+
+for (let i = 0; i < hist.length; i++) {
+  const r = hist[i];
+  const next = hist[i + 1] || null;
+
+  const validTo = iso10(r.valid_to);
+  const tb = iso10(r.tidsbegrenset);
+
+  let reason = "";
+  if (!validTo) {
+    reason = "";
+  } else if (tb && tb === validTo) {
+    reason = `Utløpt (tidsbegrenset ${tb})`;
+  } else if (next) {
+    reason = "Overført / ny periode";
+  } else {
+    reason = "Avsluttet";
+  }
+
+  if (reason) {
+    showReasonColumn = true;
+    break;
+  }
+}
+const reasonTh = document.getElementById("permitReasonTh");
+if (reasonTh) {
+  reasonTh.style.display = showReasonColumn ? "" : "none";
+}
+
+
+
   if (!now && hist.length === 0) {
     clearPermitView();
     safeEl("permitEmpty").textContent = `Fant ikke permit_key: ${permitKey}`;
@@ -454,6 +487,7 @@ card.innerHTML = `
     } else {
       reason = "Avsluttet";
     }
+    if (!reason) reson = "--";
 
     const vf = displayDate(r.valid_from);
     const vtLabel = (r.valid_to_label === "Aktiv") ? "Aktiv" : displayDate(r.valid_to_label);
@@ -465,7 +499,6 @@ card.innerHTML = `
       <td class="muted">${escapeHtml(reason)}</td>
       <td>${escapeHtml(r.owner_name)}</td>
       <td><a class="link" href="#/owner/${encodeURIComponent(r.owner_identity)}">${escapeHtml(r.owner_identity)}</a></td>
-      <td>${escapeHtml(r.owner_orgnr || "")}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -591,6 +624,34 @@ function renderOwner(ownerIdentity) {
 
   const histBody = safeEl("ownerHistoryTable").querySelector("tbody");
   histBody.innerHTML = "";
+
+  // Skal vi vise Årsak-kolonnen?
+let showReasonColumn = false;
+
+for (let i = 0; i < hist.length; i++) {
+  const r = hist[i];
+  const next = hist[i + 1] || null;
+
+  const validTo = iso10(r.valid_to);
+  const tb = iso10(r.tidsbegrenset);
+
+  let reason = "";
+  if (!validTo) {
+    reason = "";
+  } else if (tb && tb === validTo) {
+    reason = `Utløpt (tidsbegrenset ${tb})`;ƒ
+  } else if (next) {
+    reason = "Overført / ny periode";
+  } else {
+    reason = "Avsluttet";
+  }
+
+  if (reason) {
+    showReasonColumn = true;
+    break;
+  }
+}
+
 
   for (let i = 0; i < hist.length; i++) {
     const r = hist[i];
