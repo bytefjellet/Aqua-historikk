@@ -402,9 +402,20 @@ const artHtml = artText ? escapeHtml(artText) : "";
 const formal = (rowDict["FORMÅL"] ?? "").toString().trim();
 const produksjonsstadium = (rowDict["PRODUKSJONSSTADIUM"] ?? rowDict["PRODUKSJONSFORM"] ?? "").toString().trim();
 
-const kap = (rowDict["TILL_KAP"] ?? "").toString().trim();
+const kapRaw = (rowDict["TILL_KAP"] ?? "").toString().trim();
 const enh = (rowDict["TILL_ENHET"] ?? "").toString().trim();
+
+let kap = kapRaw;
+if (kapRaw && /^-?\d+([.,]\d+)?$/.test(kapRaw)) {
+  const num = Number(kapRaw.replace(",", "."));
+  if (Number.isFinite(num)) {
+    // Hvis desimaldelen er .00 → vis heltall
+    kap = Number.isInteger(num) ? String(Math.trunc(num)) : String(num).replace(".", ",");
+  }
+}
+
 const kapasitet = kap ? `${kap}${enh ? " " + enh : ""}` : "";
+
 
 const prodOmrRaw = (rowDict["PROD_OMR"] ?? "").toString().trim();
 const prodOmr = prodOmrRaw ? prodOmrRaw : "N/A";
