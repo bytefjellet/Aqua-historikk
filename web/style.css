@@ -353,8 +353,4 @@ a:visited { color: inherit; }
 }
 .hidden { display: none !important; }
 
-/* Permit: skjul resultatområdet som default */
-#view-permit .split {
-  display: none;
-}
 
