@@ -44,16 +44,17 @@ body {
   line-height: 1.45;
 }
 
-/* Header */
+/* Header (ingen strek under – så den ikke lager strek mellom tittel og tabs) */
 .topbar {
   background: var(--surface);
-  border-bottom: none; /* ingen strek mellom tittel og tabs */
+  border-bottom: none;
 }
 
 .topbar-inner {
   max-width: 1200px;
   margin: 0 auto;
   padding: 14px 24px 10px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -65,23 +66,19 @@ body {
   font-weight: 750;
 }
 
-/* DB-pill høyre */
-.status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-/* Sticky tabs-rad (ingen strek over, kun under) */
+/* Sticky tabs-bar (DENNE blir sticky på window-scroll) */
 .tabsbar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 999;
+
   background: var(--surface);
 
-  border-top: none;                      /* fjerner streken mellom tittel og tabs */
-  border-bottom: 1px solid var(--border);/* eneste strek */
+  /* Ingen strek over (så det ikke blir linje mellom tittel og tabs) */
+  border-top: none;
+
+  /* Én strek under tabs (valgfritt, men ryddig) */
+  border-bottom: 1px solid var(--border);
 }
 
 .tabs-inner {
@@ -106,9 +103,7 @@ body {
 
 .tab:hover { color: var(--text); }
 
-.tab.active {
-  color: var(--primary);
-}
+.tab.active { color: var(--primary); }
 
 .tab.active::after {
   content: "";
@@ -121,9 +116,23 @@ body {
   background: var(--primary);
 }
 
-/* Ikke la besøkte tabs endre farge */
+/* DB-pill */
+#dbStatus.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 600;
+  background: var(--primary-soft);
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* Ikke endre farge på besøkte tabs */
 .tab:visited { color: var(--muted); }
 .tab.active:visited { color: var(--primary); }
+
 
 
 /* =========================
