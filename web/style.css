@@ -401,3 +401,11 @@ a:visited { color: inherit; }
   background: var(--primary-soft);
   color: var(--primary);
 }
+
+/* Formål-knapp med 0 treff: dempet blå */
+.filter-btn.zero {
+  border-color: #cfe0ff;
+  background: #f2f7ff;
+  color: #2b5fd9;
+  opacity: 0.7;
+}

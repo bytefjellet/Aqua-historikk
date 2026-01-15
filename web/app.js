@@ -149,6 +149,36 @@ function parseJsonSafe(s) {
   try { return s ? JSON.parse(s) : {}; } catch { return {}; }
 }
 
+// --- Owner formål filter buttons ---
+function renderOwnerFormalButtons(countsByFormal) {
+  const root = $("ownerFormalFilters");
+  if (!root) return;
+
+  root.innerHTML = "";
+
+  for (const formal of allFormals) {
+    const count = Number(countsByFormal.get(formal) || 0);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "filter-btn";
+    if (count === 0) btn.classList.add("zero");
+    if (ownerFilters.formal === formal) btn.classList.add("active");
+
+    btn.textContent = `${formal} (${count})`;
+
+    btn.addEventListener("click", () => {
+      ownerFilters.formal =
+        ownerFilters.formal === formal ? null : formal;
+
+      const r = parseHash();
+      if (r.view === "owner") renderOwner(r.ident);
+    });
+
+    root.appendChild(btn);
+  }
+}
+
 function extractFormalFromRowJson(rowJsonText) {
   const d = parseJsonSafe(rowJsonText);
   return String(d["FORMÅL"] ?? "").trim();
