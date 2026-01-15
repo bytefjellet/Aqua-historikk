@@ -7,27 +7,26 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:,">
 
-
   <!-- sql.js (WASM) -->
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
   <script defer src="app.js"></script>
 </head>
 
 <body>
-<header class="topbar">
-  <div class="topbar-inner">
-    <div class="brand">
-      <div class="title">Akvakulturregisteret – historikk</div>
-    </div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="title">Akvakulturregisteret – historikk</div>
+      </div>
 
-    <div class="status">
-      <span id="dbStatus" class="pill">Laster database…</span>
-      <span id="dbMeta" class="muted"></span>
+      <div class="status">
+        <span id="dbStatus" class="pill">Laster database…</span>
+        <span id="dbMeta" class="muted"></span>
+      </div>
     </div>
-  </div>
-</header>
+  </header>
 
-<nav class="tabsbar" role="tablist" aria-label="Navigasjon">
+  <nav class="tabsbar" role="tablist" aria-label="Navigasjon">
     <div class="tabs-inner">
       <a id="tab-now" class="tab" href="#/now" role="tab">Gjeldende status</a>
       <a id="tab-permit" class="tab" href="#/permit" role="tab">Tillatelse</a>
@@ -41,7 +40,7 @@
       <h2>Gjeldende status</h2>
 
       <div class="controls">
-        <input id="nowSearch" class="input" placeholder="Søk: orgn.nr eller tillatelsesnr. …" />
+        <input id="nowSearch" class="input" placeholder="Søk: org.nr eller tillatelsesnr. …" />
         <label class="checkbox">
           <input id="onlyGrunnrente" type="checkbox" />
           Kun grunnrentepliktig
@@ -81,33 +80,32 @@
         </div>
       </div>
 
+      <div class="split hidden">
+        <div class="split-left">
+          <div id="permitCard" class="card hidden"></div>
+        </div>
 
-      <div class="split">
-      <div class="split-left">
-        <div id="permitCard" class="card hidden"></div>
+        <div class="split-right">
+          <!-- H3 skjules i CSS for å få tabelltopp på samme linje som kortet -->
+          <h3>Historikk</h3>
+          <div class="table-wrap">
+            <table class="table" id="permitHistoryTable">
+              <thead>
+                <tr>
+                  <th>Gyldig fra</th>
+                  <th>Gyldig til</th>
+                  <th id="permitReasonTh">Årsak</th>
+                  <th>Eier</th>
+                  <th>Org.nr.</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div id="permitEmpty" class="muted" style="margin-top:10px"></div>
+        </div>
       </div>
-
-      <div class="split-right">
-        <h3>Historikk</h3>
-        <div class="table-wrap">
-          <table class="table" id="permitHistoryTable">
-      </div>
-    </div>
-
-    <thead>
-      <tr>
-        <th>Gyldig fra</th>
-        <th>Gyldig til</th>
-        <th id="permitReasonTh">Årsak</th>
-        <th>Eier</th>
-        <th>Org.nr.</th>
-      </tr>
-    </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div id="permitEmpty" class="muted"></div>
     </section>
 
     <!-- OWNER -->
@@ -115,60 +113,66 @@
       <h2>Innehaver</h2>
 
       <div class="controls">
-        <input id="ownerInput" class="input" placeholder="Skriv orgn.nr. …" />
+        <input id="ownerInput" class="input" placeholder="Skriv org.nr. (9 siffer) …" />
         <button id="ownerGo" class="button" type="button">Søk</button>
       </div>
 
+      <!-- Tom-tilstand lik permit -->
+      <div id="ownerEmptyState" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">Søk etter innehaver</div>
+        <div class="empty-text">
+          Skriv et org.nr. (9 siffer) i feltet over for å se aktive tillatelser og historikk.
+        </div>
+      </div>
+
       <div class="split">
-  <div class="split-left">
-    <div id="ownerCard" class="card hidden"></div>
-    <div id="ownerEmpty" class="muted"></div>
-  </div>
+        <div class="split-left">
+          <div id="ownerCard" class="card hidden"></div>
+          <div id="ownerEmpty" class="muted" style="margin-top:10px"></div>
+        </div>
 
-  <div class="split-right">
-    <h3>Aktive tillatelser nå</h3>
-    <div class="table-wrap">
-      <table class="table" id="ownerActiveTable">
-        <thead>
-          <tr>
-            <th>Tillatelse</th>
-            <th>Art</th>
-            <th>Formål</th>
-            <th>Produksjonsstadium</th>
-            <th>Tillatelseskapasitet</th>
-            <th>Produksjonsområde</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+        <div class="split-right">
+          <h3>Aktive tillatelser nå</h3>
+          <div class="table-wrap">
+            <table class="table" id="ownerActiveTable">
+              <thead>
+                <tr>
+                  <th>Tillatelse</th>
+                  <th>Art</th>
+                  <th>Formål</th>
+                  <th>Produksjonsstadium</th>
+                  <th>Tillatelseskapasitet</th>
+                  <th>Produksjonsområde</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
 
-    <h3 style="margin-top:18px">Historikk (alle perioder)</h3>
-    <div class="table-wrap">
-      <table class="table" id="ownerHistoryTable">
-        <thead>
-          <tr>
-            <th>Tillatelse</th>
-            <th>Gyldig fra</th>
-            <th>Gyldig til</th>
-            <th>Årsak</th>
-            <th>Eiernavn</th>
-            <th>Org.nr</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
+          <h3 style="margin-top:18px">Historikk</h3>
+          <div class="table-wrap">
+            <table class="table" id="ownerHistoryTable">
+              <thead>
+                <tr>
+                  <th>Tillatelse</th>
+                  <th>Gyldig fra</th>
+                  <th>Gyldig til</th>
+                  <th>Årsak</th>
+                  <th>Eiernavn</th>
+                  <th>Org.nr.</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer class="footer">
-    <span class="muted">
-      Kilde: Fiskeridirektoratet
-    </span>
+    <span class="muted">Kilde: Fiskeridirektoratet</span>
   </footer>
 </body>
 </html>
