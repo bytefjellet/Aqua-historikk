@@ -569,6 +569,30 @@ const tidsbegrensetCardDisplay = tidsbegrensetCard
 
     const subline = "";
 
+    function renderOwnerCardUnified({ ownerName, ownerIdentity, activeCount, totalPeriods }) {
+      const card = safeEl("ownerCard");
+      card.classList.remove("hidden");
+
+      const ident = String(ownerIdentity ?? "").trim();
+
+      card.innerHTML = `
+        <div style="font-size:1.1rem;font-weight:700">
+          ${escapeHtml(valueOrDash(ownerName))}
+        </div>
+
+        <div class="pills" style="margin-top:8px">
+          <span class="pill pill--green">Innehaver</span>
+          <span class="pill pill--blue">Org.nr. ${escapeHtml(ident || "—")}</span>
+        </div>
+
+        <div style="margin-top:10px">
+          <div><span class="muted">Aktive tillatelser:</span> ${escapeHtml(String(activeCount ?? 0))}</div>
+          <div><span class="muted">Historiske perioder:</span> ${escapeHtml(String(totalPeriods ?? 0))}</div>
+        </div>
+      `;
+    }
+
+
     // Hent siste snapshot for ekstra detaljer (hvis mulig)
     let snapRow = null;
     if (schema.permit_snapshot_has_row_json || schema.permit_snapshot_has_art || schema.permit_snapshot_has_grunnrente) {
@@ -715,15 +739,13 @@ function renderOwner(ownerIdentity) {
     return;
   }
 
-  const card = safeEl("ownerCard");
-  card.classList.remove("hidden");
-  card.innerHTML = `
-    <div><strong>${escapeHtml(stats.owner_name || "(ukjent)")}</strong></div>
-    <div class="muted">Org.nr.: ${escapeHtml(stats.owner_identity)}</div>
-    <div style="margin-top:8px" class="muted">
-      Aktive tillatelser: ${stats.active_permits} • Historiske perioder: ${stats.total_periods}
-    </div>
-  `;
+  renderOwnerCardUnified({
+  ownerName: stats.owner_name || "(ukjent)",
+  ownerIdentity: stats.owner_identity,
+  activeCount: stats.active_permits,
+  totalPeriods: stats.total_periods,
+});
+
 
   const active = execAll(`
     SELECT
@@ -794,7 +816,7 @@ function renderOwner(ownerIdentity) {
     if (!validTo) {
       reason = "";
     } else if (tb && tb === validTo) {
-      reason = `Utløpt (tidsbegrenset ${tb})`;
+      reason = `Utløpt (tidsbegrenset ${formatNorwegianDate(tb)})`;
     } else if (hasNextSamePermit) {
       reason = "Overført / ny periode";
     } else {
