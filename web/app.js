@@ -5,10 +5,7 @@
 // - Robust permit-søk (inkl. historiske): normalisering + rydd først + vis resultater kun når data finnes
 // - Unified permit card: samme infokort for aktive og historiske tillatelser
 // - Viser "Tidsbegrenset" i infokortet når ownership_history.tidsbegrenset finnes
-// - Owner (Unified owner card):
-//   * Ingen klikkbar lenke i overskriften
-//   * Ingen piller i eierkort
-//   * Riktige tellinger (aktive, tidligere unike ikke-lenger-aktive, grunnrente aktive)
+// - Bevarer: schema-safe art, datoformat (YYYY-MM-DD), årsak-kolonne skjules hvis tom, tom-tilstand/feil
 // =========================
 
 let SQL = null;
@@ -61,7 +58,7 @@ function normalizePermitKey(raw) {
   return (raw ?? "")
     .toString()
     .trim()
-    .replace(/\s+/g, "")
+    .replace(/\s+/g, "") // fjern også whitespace inni
     .toUpperCase();
 }
 
@@ -167,6 +164,30 @@ function setPermitResultsVisible(visible) {
   if (split) split.classList.toggle("hidden", !visible);
 }
 
+// --- OWNER empty state helpers (samme mønster som PERMIT) ---
+function setOwnerEmptyStateVisible(visible) {
+  const el = $("ownerEmptyState");
+  if (el) el.classList.toggle("hidden", !visible);
+}
+
+function setOwnerEmptyStateContent({ icon, title, text }) {
+  const root = $("ownerEmptyState");
+  if (!root) return;
+
+  const iconEl = root.querySelector(".empty-icon");
+  const titleEl = root.querySelector(".empty-title");
+  const textEl  = root.querySelector(".empty-text");
+
+  if (iconEl && icon != null) iconEl.textContent = icon;
+  if (titleEl && title != null) titleEl.textContent = title;
+  if (textEl  && text  != null) textEl.textContent  = text;
+}
+
+function setOwnerResultsVisible(visible) {
+  const split = safeEl("view-owner").querySelector(".split");
+  if (split) split.classList.toggle("hidden", !visible);
+}
+
 // --- clear helpers ---
 function clearPermitView() {
   setPermitResultsVisible(false);
@@ -187,33 +208,40 @@ function clearPermitView() {
 }
 
 function clearOwnerView() {
+  // Skjul resultater (kort + tabeller)
+  setOwnerResultsVisible(false);
+
+  // Vis tom-tilstand
+  setOwnerEmptyStateVisible(true);
+
   safeEl("ownerEmpty").textContent = "";
   safeEl("ownerCard").classList.add("hidden");
 
   const a = safeEl("ownerActiveTable").querySelector("tbody");
   const h = safeEl("ownerHistoryTable").querySelector("tbody");
-  if (!a) throw new Error("Mangler <tbody> i #ownerActiveTable");
-  if (!h) throw new Error("Mangler <tbody> i #ownerHistoryTable");
   a.innerHTML = "";
   h.innerHTML = "";
 }
+
 
 // --- UNIFIED permit card renderer (ACTIVE + HISTORIC) ---
 function renderPermitCardUnified({
   permitKey,
   permitUrl,
   isActive,
-  subline,
+  subline,              // string under pills (for historisk), "" for aktiv
   ownerName,
   ownerIdentity,
-  grunnrenteValue,
+  grunnrenteValue,      // true/false/null
   artText,
   formal,
   produksjonsstadium,
   kapasitet,
   prodOmr,
-  tidsbegrenset,
-}) {
+  tidsbegrenset,        // "YYYY-MM-DD" eller ""
+}) 
+
+{
   const card = safeEl("permitCard");
   card.classList.remove("hidden");
 
@@ -266,37 +294,22 @@ function renderPermitCardUnified({
     </div>
   `;
 }
+setOwnerEmptyStateVisible(false);
+setOwnerResultsVisible(true);
 
-// --- UNIFIED owner card renderer (uten piller, uten lenke i overskrift) ---
-function renderOwnerCardUnified({
-  ownerName,
-  ownerIdentity,
-  activeCount,
+// --- UNIFIED owner card renderer (samme visuelle stil som permit-kort) ---
+function renderOwnerCardUnified({ ownerName, ownerIdentity, activeCount, grunnrenteActiveCount, formerPermitCount }) {
+renderOwnerCardUnified({
+  ownerName: stats.owner_name || "(ukjent)",
+  ownerIdentity: ownerIdentity,
+  activeCount: stats.active_permits,
   grunnrenteActiveCount,
-  formerPermitCount
-}) {
-  const card = safeEl("ownerCard");
-  card.classList.remove("hidden");
+  formerPermitCount: stats.former_permits,
+});
 
-  const name = valueOrDash(ownerName);
-  const ident = String(ownerIdentity ?? "").trim();
-
-  card.innerHTML = `
-    <div style="font-size:1.1rem;font-weight:700">
-      ${escapeHtml(name)}
-    </div>
-
-    <div style="margin-top:10px">
-      <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
-
-      <div style="margin-top:10px">
-        <div><span class="muted">Aktive tillatelser:</span> ${escapeHtml(String(activeCount ?? 0))}</div>
-        <div><span class="muted">Tidligere tillatelser:</span> ${escapeHtml(String(formerPermitCount ?? 0))}</div>
-        <div><span class="muted">Grunnrentepliktige (aktive):</span> ${escapeHtml(String(grunnrenteActiveCount ?? 0))}</div>
-      </div>
-    </div>
-  `;
 }
+
+
 
 // --- sort state (NOW) ---
 const sortState = {
@@ -464,6 +477,7 @@ function renderPermit(permitKey) {
   const permitUrl =
     `https://sikker.fiskeridir.no/akvakulturregisteret/web/licenses/${encodeURIComponent(permitKey)}`;
 
+  // --- Queries ---
   const now = one(`
     SELECT
       permit_key AS permit_key,
@@ -530,15 +544,18 @@ function renderPermit(permitKey) {
 
   // Tidsbegrenset for kort: siste ikke-tomme i historikk
   let tidsbegrensetCard = "";
-  for (let i = hist.length - 1; i >= 0; i--) {
-    const tb = iso10(hist[i].tidsbegrenset);
-    if (tb) { tidsbegrensetCard = tb; break; }
-  }
+for (let i = hist.length - 1; i >= 0; i--) {
+  const tb = iso10(hist[i].tidsbegrenset);
+  if (tb) { tidsbegrensetCard = tb; break; }
+}
 
-  const tidsbegrensetCardDisplay = tidsbegrensetCard
-    ? formatNorwegianDate(tidsbegrensetCard)
-    : "";
+// Formater for visning: "2025-06-25" -> "25. juni 2025"
+const tidsbegrensetCardDisplay = tidsbegrensetCard
+  ? formatNorwegianDate(tidsbegrensetCard)
+  : "";
 
+
+  // --- Card data ---
   if (now) {
     const rowDict = parseJsonSafe(now.row_json);
 
@@ -584,6 +601,46 @@ function renderPermit(permitKey) {
   } else {
     const last = hist[hist.length - 1];
 
+    const lastTo = iso10(last.valid_to);
+    const tb = iso10(last.tidsbegrenset);
+
+    let endText = "Ikke aktiv";
+    if (lastTo) {
+      endText = (tb && tb === lastTo)
+        ? `Utløpt (tidsbegrenset ${tb})`
+        : `Avsluttet (${lastTo})`;
+    }
+
+    const maxSnap = one(`SELECT MAX(snapshot_date) AS max_date FROM snapshots;`);
+    const maxDate = maxSnap?.max_date ? String(maxSnap.max_date) : "";
+
+    const subline = "";
+
+    function renderOwnerCardUnified({ ownerName, ownerIdentity, activeCount, historicPermitCount }) {
+  const card = safeEl("ownerCard");
+  card.classList.remove("hidden");
+
+  const name = valueOrDash(ownerName);
+  const ident = String(ownerIdentity ?? "").trim();
+
+  card.innerHTML = `
+    <div style="font-size:1.1rem;font-weight:700">
+      ${escapeHtml(name)}
+    </div>
+
+    <div style="margin-top:10px">
+      <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
+
+      <div style="margin-top:10px">
+        <div><span class="muted">Aktive tillatelser:</span> ${escapeHtml(String(activeCount ?? 0))}</div>
+        <div><span class="muted">Historiske tillatelser:</span> ${escapeHtml(String(historicPermitCount ?? 0))}</div>
+      </div>
+    </div>
+  `;
+}
+
+
+
     // Hent siste snapshot for ekstra detaljer (hvis mulig)
     let snapRow = null;
     if (schema.permit_snapshot_has_row_json || schema.permit_snapshot_has_art || schema.permit_snapshot_has_grunnrente) {
@@ -625,15 +682,16 @@ function renderPermit(permitKey) {
     const prodOmr = prodOmrRaw ? prodOmrRaw : "N/A";
 
     let grunnrenteValue = false;
-    if (snapRow && snapRow.grunnrente_pliktig != null && snapRow.grunnrente_pliktig !== "") {
-      grunnrenteValue = Number(snapRow.grunnrente_pliktig) === 1;
-    }
+      if (snapRow && snapRow.grunnrente_pliktig != null && snapRow.grunnrente_pliktig !== "") {
+        grunnrenteValue = Number(snapRow.grunnrente_pliktig) === 1;
+      }
+
 
     renderPermitCardUnified({
       permitKey,
       permitUrl,
       isActive: false,
-      subline: "",
+      subline,
       ownerName: last.owner_name ?? "",
       ownerIdentity: last.owner_identity ?? "",
       grunnrenteValue,
@@ -693,12 +751,43 @@ function renderOwner(ownerIdentity) {
   setActiveTab("tab-owner");
   showView("view-owner");
 
+  // Default tom-tilstand (lik Tillatelse)
+  setOwnerEmptyStateContent({
+    icon: "🔍",
+    title: "Søk etter innehaver",
+    text: "Skriv et org.nr. (9 siffer) i feltet over for å se aktive tillatelser og historikk."
+  });
+
   clearOwnerView();
 
   if (ownerIdentity != null) safeEl("ownerInput").value = String(ownerIdentity);
 
   const inputEl = safeEl("ownerInput");
-  const identTrim = String(ownerIdentity || "").trim();
+  const raw = String(ownerIdentity || "");
+  const identTrim = raw.trim();
+
+  // Ingen input → bare tom-tilstand
+  if (!identTrim) {
+    setOwnerEmptyStateVisible(true);
+    setOwnerResultsVisible(false);
+    return;
+  }
+
+  // ❌ UGYLDIG org.nr → permit-lik feilmelding
+  if (!/^[0-9]{9}$/.test(identTrim)) {
+    setOwnerEmptyStateContent({
+      icon: "⚠️",
+      title: "Ugyldig org.nr.",
+      text: "Org.nr. må være et tall på 9 siffer uten mellomrom."
+    });
+    setOwnerEmptyStateVisible(true);
+    setOwnerResultsVisible(false);
+    return;
+  }
+
+  const ownerIdentityNorm = identTrim;
+  inputEl.value = ownerIdentityNorm;
+
 
   if (!identTrim) {
     safeEl("ownerEmpty").textContent =
@@ -714,67 +803,80 @@ function renderOwner(ownerIdentity) {
 
   ownerIdentity = identTrim.replace(/\s+/g, "");
   inputEl.value = ownerIdentity;
-  const ownerIdentityNorm = ownerIdentity;
 
-  // --- Owner stats (aktive / tidligere unike ikke-lenger-aktive) ---
+
+
   const stats = one(`
-    WITH owner_rows AS (
-      SELECT
-        permit_key,
-        owner_name,
-        REPLACE(TRIM(owner_identity), ' ', '') AS owner_identity,
-        valid_to
-      FROM ownership_history
-      WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
-    ),
-    per_permit AS (
-      SELECT
-        permit_key,
-        MAX(owner_name) AS owner_name,
-        SUM(CASE WHEN valid_to IS NULL OR TRIM(valid_to) = '' THEN 1 ELSE 0 END) AS has_active,
-        SUM(CASE WHEN valid_to IS NOT NULL AND TRIM(valid_to) <> '' THEN 1 ELSE 0 END) AS has_ended
-      FROM owner_rows
-      GROUP BY permit_key
-    )
+  WITH owner_rows AS (
     SELECT
-      ? AS owner_identity,
-      MAX(owner_name) AS owner_name,
-      (SELECT COUNT(*) FROM permit_current WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?) AS active_permits,
-      SUM(CASE WHEN has_active = 0 AND has_ended > 0 THEN 1 ELSE 0 END) AS former_permits
-    FROM per_permit;
-  `, [ownerIdentityNorm, ownerIdentityNorm, ownerIdentityNorm]);
-
-  if (!stats) {
-    safeEl("ownerEmpty").textContent = `Fant ikke org.nr.: ${ownerIdentityNorm}`;
-    return;
-  }
-
-  // --- Active permits (for table + grunnrenteActiveCount) ---
-  const active = execAll(`
-    SELECT
-      permit_key AS permit_key,
-      ${schema.permit_current_has_art ? "art AS art" : "NULL AS art"},
-      row_json AS row_json,
-      grunnrente_pliktig AS grunnrente_pliktig
-    FROM permit_current
+      permit_key,
+      owner_name,
+      REPLACE(TRIM(owner_identity), ' ', '') AS owner_identity,
+      valid_to
+    FROM ownership_history
     WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
-    ORDER BY permit_key;
-  `, [ownerIdentityNorm]);
+  ),
+  per_permit AS (
+    SELECT
+      permit_key,
+      MAX(owner_name) AS owner_name,
+      SUM(CASE WHEN valid_to IS NULL OR valid_to = '' THEN 1 ELSE 0 END) AS has_active,
+      SUM(CASE WHEN valid_to IS NOT NULL AND valid_to <> '' THEN 1 ELSE 0 END) AS has_ended
+    FROM owner_rows
+    GROUP BY permit_key
+  )
+  SELECT
+    ? AS owner_identity,
+    MAX(owner_name) AS owner_name,
+    SUM(CASE WHEN has_active > 0 THEN 1 ELSE 0 END) AS active_permits,
+    SUM(CASE WHEN has_active = 0 AND has_ended > 0 THEN 1 ELSE 0 END) AS former_permits
+  FROM per_permit;
+`, [ownerIdentity, ownerIdentity]);
 
-  const grunnrenteActiveCount = active.reduce((acc, r) =>
-    acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0)
-  , 0);
 
-  // --- Render owner card (unified) ---
-  renderOwnerCardUnified({
-    ownerName: stats.owner_name || "(ukjent)",
-    ownerIdentity: ownerIdentityNorm,
-    activeCount: Number(stats.active_permits ?? 0),
-    grunnrenteActiveCount,
-    formerPermitCount: Number(stats.former_permits ?? 0),
+
+
+  if (!stats || (
+  Number(stats.active_permits ?? 0) === 0 &&
+  Number(stats.former_permits ?? 0) === 0
+)) {
+  setOwnerEmptyStateContent({
+    icon: "⚠️",
+    title: "Ingen treff",
+    text: `Fant ingen informasjon for org.nr. ${ownerIdentityNorm}.`
   });
+  setOwnerEmptyStateVisible(true);
+  setOwnerResultsVisible(false);
+  return;
+}
 
-  // --- Render active table ---
+
+  renderOwnerCardUnified({
+  ownerName: stats.owner_name || "(ukjent)",
+  ownerIdentity: ownerIdentity,
+  activeCount: stats.active_permits,
+  formerPermitCount: stats.former_permits,
+});
+
+
+
+
+  const active = execAll(`
+  SELECT
+    permit_key AS permit_key,
+    ${schema.permit_current_has_art ? "art AS art" : "NULL AS art"},
+    row_json AS row_json,
+    grunnrente_pliktig AS grunnrente_pliktig
+  FROM permit_current
+  WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
+  ORDER BY permit_key;
+`, [ownerIdentity]);
+
+const grunnrenteActiveCount = active.reduce((acc, r) => {
+  return acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0);
+}, 0);
+
+
   const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
   activeBody.innerHTML = "";
 
@@ -790,6 +892,7 @@ function renderOwner(ownerIdentity) {
     const kap = String(rowDict["TILL_KAP"] ?? "").trim();
     const enh = String(rowDict["TILL_ENHET"] ?? "").trim();
     const prodOmr = String(rowDict["PROD_OMR"] ?? "").trim();
+
     const kapasitet = kap ? `${kap}${enh ? " " + enh : ""}` : "";
 
     const tr = document.createElement("tr");
@@ -804,20 +907,20 @@ function renderOwner(ownerIdentity) {
     activeBody.appendChild(tr);
   }
 
-  // --- Owner history table ---
   const hist = execAll(`
-    SELECT
-      permit_key AS permit_key,
-      valid_from AS valid_from,
-      valid_to   AS valid_to,
-      COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
-      owner_name AS owner_name,
-      owner_orgnr AS owner_orgnr,
-      tidsbegrenset AS tidsbegrenset
-    FROM ownership_history
-    WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
-    ORDER BY permit_key, date(valid_from), id;
-  `, [ownerIdentityNorm]);
+  SELECT
+    permit_key AS permit_key,
+    valid_from AS valid_from,
+    valid_to   AS valid_to,
+    COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
+    owner_name AS owner_name,
+    owner_orgnr AS owner_orgnr,
+    tidsbegrenset AS tidsbegrenset
+  FROM ownership_history
+  WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
+  ORDER BY permit_key, date(valid_from), id;
+`, [ownerIdentity]);
+
 
   const histBody = safeEl("ownerHistoryTable").querySelector("tbody");
   histBody.innerHTML = "";
@@ -891,9 +994,10 @@ function renderRoute() {
 // --- events ---
 function wireEvents() {
   window.addEventListener("hashchange", () => {
-    console.log("hashchange ->", location.hash);
-    renderRoute();
-  });
+  console.log("hashchange ->", location.hash);
+  renderRoute();
+});
+
 
   // NOW search (debounced)
   let nowTimer = null;
@@ -953,27 +1057,28 @@ function wireEvents() {
 
   // OWNER actions
   safeEl("ownerGo").addEventListener("click", () => {
-    console.log("ownerGo click");
+  console.log("ownerGo click");
 
-    const ident = safeEl("ownerInput").value.trim();
-    console.log("ownerGo ident:", ident);
+  const ident = safeEl("ownerInput").value.trim();
+  console.log("ownerGo ident:", ident);
 
-    if (!ident) {
-      clearOwnerView();
-      safeEl("ownerEmpty").textContent = "Skriv et org.nr. (9 siffer).";
-      return;
-    }
-    if (!isNineDigits(ident)) {
-      clearOwnerView();
-      safeEl("ownerEmpty").textContent = "Ugyldig org.nr. Skriv et tall med 9 siffer.";
-      return;
-    }
+  if (!ident) {
+    clearOwnerView();
+    safeEl("ownerEmpty").textContent = "Skriv et org.nr. (9 siffer).";
+    return;
+  }
+  if (!isNineDigits(ident)) {
+    clearOwnerView();
+    safeEl("ownerEmpty").textContent = "Ugyldig org.nr. Skriv et tall med 9 siffer.";
+    return;
+  }
 
-    const norm = ident.replace(/\s+/g, "");
-    console.log("ownerGo -> hash", `#/owner/${norm}`);
+  const norm = ident.replace(/\s+/g, "");
+  console.log("ownerGo -> hash", `#/owner/${norm}`);
 
-    toHashOwner(norm);
-  });
+  toHashOwner(norm);
+});
+
 
   safeEl("ownerInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") safeEl("ownerGo").click();
