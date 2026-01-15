@@ -698,6 +698,8 @@ const tidsbegrensetCardDisplay = tidsbegrensetCard
 
 // --- OWNER view ---
 function renderOwner(ownerIdentity) {
+  console.log("renderOwner()", ownerIdentity);
+
   setActiveTab("tab-owner");
   showView("view-owner");
 
