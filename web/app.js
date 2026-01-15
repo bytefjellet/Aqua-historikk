@@ -267,31 +267,29 @@ function renderPermitCardUnified({
 }
 
 // --- UNIFIED owner card renderer (samme visuelle stil som permit-kort) ---
-function renderOwnerCardUnified({ ownerName, ownerIdentity, activeCount, totalPeriods }) {
+function renderOwnerCardUnified({ ownerName, ownerIdentity, activeCount, formerPermitCount }) {
   const card = safeEl("ownerCard");
   card.classList.remove("hidden");
 
+  const name = valueOrDash(ownerName);
   const ident = String(ownerIdentity ?? "").trim();
 
   card.innerHTML = `
     <div style="font-size:1.1rem;font-weight:700">
-      ${escapeHtml(valueOrDash(ownerName))}
-    </div>
-
-    <div class="pills" style="margin-top:8px">
-      <span class="pill pill--green">Innehaver</span>
-      <span class="pill pill--blue">Org.nr.</span>
+      ${escapeHtml(name)}
     </div>
 
     <div style="margin-top:10px">
       <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
-      <div style="margin-top:8px">
+
+      <div style="margin-top:10px">
         <div><span class="muted">Aktive tillatelser:</span> ${escapeHtml(String(activeCount ?? 0))}</div>
-        <div><span class="muted">Historiske perioder:</span> ${escapeHtml(String(totalPeriods ?? 0))}</div>
+        <div><span class="muted">Tidligere tillatelser:</span> ${escapeHtml(String(formerPermitCount ?? 0))}</div>
       </div>
     </div>
   `;
 }
+
 
 
 // --- sort state (NOW) ---
@@ -759,26 +757,32 @@ function renderOwner(ownerIdentity) {
 
 
   const stats = one(`
+  WITH owner_rows AS (
+    SELECT
+      permit_key,
+      owner_name,
+      REPLACE(TRIM(owner_identity), ' ', '') AS owner_identity,
+      valid_to
+    FROM ownership_history
+    WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
+  ),
+  per_permit AS (
+    SELECT
+      permit_key,
+      MAX(owner_name) AS owner_name,
+      SUM(CASE WHEN valid_to IS NULL OR valid_to = '' THEN 1 ELSE 0 END) AS has_active,
+      SUM(CASE WHEN valid_to IS NOT NULL AND valid_to <> '' THEN 1 ELSE 0 END) AS has_ended
+    FROM owner_rows
+    GROUP BY permit_key
+  )
   SELECT
-    REPLACE(TRIM(owner_identity), ' ', '') AS owner_identity,
+    ? AS owner_identity,
     MAX(owner_name) AS owner_name,
+    SUM(CASE WHEN has_active > 0 THEN 1 ELSE 0 END) AS active_permits,
+    SUM(CASE WHEN has_active = 0 AND has_ended > 0 THEN 1 ELSE 0 END) AS former_permits
+  FROM per_permit;
+`, [ownerIdentity, ownerIdentity]);
 
-    -- Antall aktive tillatelser: tell unike tillatelser der perioden er aktiv
-    COUNT(DISTINCT CASE
-      WHEN valid_to IS NULL OR valid_to = '' THEN permit_key
-      ELSE NULL
-    END) AS active_permits,
-
-    -- Antall historiske tillatelser: tell unike tillatelser der valid_to er satt
-    COUNT(DISTINCT CASE
-      WHEN valid_to IS NOT NULL AND valid_to <> '' THEN permit_key
-      ELSE NULL
-    END) AS historic_permits
-
-  FROM ownership_history
-  WHERE REPLACE(TRIM(owner_identity), ' ', '') = ?
-  GROUP BY REPLACE(TRIM(owner_identity), ' ', '');
-`, [ownerIdentity]);
 
 
 
@@ -789,10 +793,11 @@ function renderOwner(ownerIdentity) {
 
   renderOwnerCardUnified({
   ownerName: stats.owner_name || "(ukjent)",
-  ownerIdentity: stats.owner_identity,
+  ownerIdentity: ownerIdentity,
   activeCount: stats.active_permits,
-  historicPermitCount: stats.historic_permits,
+  formerPermitCount: stats.former_permits,
 });
+
 
 
 
