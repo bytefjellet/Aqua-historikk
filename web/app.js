@@ -2,16 +2,6 @@
 
 // =========================
 // app.js (FULL REPLACEMENT)
-// - Robust permit-søk (inkl. historiske): normalisering + rydd først + vis resultater kun når data finnes
-// - Unified permit card: samme infokort for aktive og historiske tillatelser
-// - Viser "Tidsbegrenset" i infokortet når ownership_history.tidsbegrenset finnes
-// - Owner (Unified owner card):
-//   * Ingen klikkbar lenke i overskriften
-//   * Ingen piller i eierkort
-//   * Riktige tellinger (aktive, tidligere unike ikke-lenger-aktive, grunnrente aktive)
-// - Owner empty-state:
-//   * Tom-tilstand skjules når treff vises (slik som Permit)
-//   * Permit-lik feilmelding ved ugyldig org.nr (9 siffer uten mellomrom)
 // =========================
 
 let SQL = null;
@@ -26,13 +16,14 @@ const schema = {
   permit_snapshot_has_row_json: false,
   permit_snapshot_has_grunnrente: false,
 };
-// --- Owner filter state ---
+
+// Owner filter state
 const ownerFilters = {
   formal: null, // valgt formål (string) eller null
 };
 
-// Liste over alle formål i DB (fra permit_current)
-let allFormals = []; // array av strings
+// Liste over alle formål i DB (fra permit_current.row_json)
+let allFormals = [];
 
 // --- helpers ---
 function $(id) { return document.getElementById(id); }
@@ -41,19 +32,6 @@ function safeEl(id) {
   const el = $(id);
   if (!el) throw new Error(`Mangler element i HTML: #${id}`);
   return el;
-}
-
-function setStatus(text, kind) {
-  const el = safeEl("dbStatus");
-  el.textContent = text;
-
-  el.classList.add("pill");
-  el.classList.remove("ok", "warn", "bad");
-  if (kind) el.classList.add(kind);
-}
-
-function setMeta(text) {
-  safeEl("dbMeta").textContent = text || "";
 }
 
 function escapeHtml(s) {
@@ -65,24 +43,16 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
-function toHashNow() { location.hash = "#/now"; }
-
-function normalizePermitKey(raw) {
-  return (raw ?? "")
-    .toString()
-    .trim()
-    .replace(/\s+/g, "")
-    .toUpperCase();
+function setStatus(text, kind) {
+  const el = safeEl("dbStatus");
+  el.textContent = text;
+  el.classList.add("pill");
+  el.classList.remove("ok", "warn", "bad");
+  if (kind) el.classList.add(kind);
 }
 
-function toHashPermit(key) {
-  const norm = normalizePermitKey(key);
-  location.hash = `#/permit/${encodeURIComponent(norm)}`;
-}
-
-function toHashOwner(identity) {
-  const norm = String(identity ?? "").trim().replace(/\s+/g, "");
-  location.hash = `#/owner/${encodeURIComponent(norm)}`;
+function setMeta(text) {
+  safeEl("dbMeta").textContent = text || "";
 }
 
 function setActiveTab(tabId) {
@@ -115,6 +85,15 @@ function one(sql, params = []) {
   return rows.length ? rows[0] : null;
 }
 
+function hasColumn(table, col) {
+  const rows = execAll(`PRAGMA table_info(${table});`);
+  return rows.some(r => String(r.name) === col);
+}
+
+function parseJsonSafe(s) {
+  try { return s ? JSON.parse(s) : {}; } catch { return {}; }
+}
+
 function iso10(s) {
   if (!s) return null;
   const t = String(s).trim();
@@ -128,7 +107,7 @@ function displayDate(s) {
 }
 
 function formatNorwegianDate(isoDate) {
-  const d = new Date(isoDate + "T00:00:00");
+  const d = new Date(String(isoDate).slice(0, 10) + "T00:00:00");
   return new Intl.DateTimeFormat("nb-NO", {
     day: "numeric",
     month: "long",
@@ -136,80 +115,47 @@ function formatNorwegianDate(isoDate) {
   }).format(d);
 }
 
-function hasColumn(table, col) {
-  const rows = execAll(`PRAGMA table_info(${table});`);
-  return rows.some(r => String(r.name) === col);
+function valueOrDash(v) {
+  const t = String(v ?? "").trim();
+  return t ? t : "—";
 }
 
 function isNineDigits(s) {
   return /^[0-9]{9}$/.test(String(s || "").trim().replace(/\s+/g, ""));
 }
 
-function parseJsonSafe(s) {
-  try { return s ? JSON.parse(s) : {}; } catch { return {}; }
+function normalizePermitKey(raw) {
+  return (raw ?? "")
+    .toString()
+    .trim()
+    .replace(/\s+/g, "")
+    .toUpperCase();
 }
 
-// --- Owner formål filter buttons ---
-function renderOwnerFormalButtons(countsByFormal) {
-  const root = $("ownerFormalFilters");
-  if (!root) return;
-
-  root.innerHTML = "";
-
-  for (const formal of allFormals) {
-    const count = Number(countsByFormal.get(formal) || 0);
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "filter-btn";
-    if (count === 0) btn.classList.add("zero");
-    if (ownerFilters.formal === formal) btn.classList.add("active");
-
-    btn.textContent = `${formal} (${count})`;
-
-    btn.addEventListener("click", () => {
-      ownerFilters.formal =
-        ownerFilters.formal === formal ? null : formal;
-
-      const r = parseHash();
-      if (r.view === "owner") renderOwner(r.ident);
-    });
-
-    root.appendChild(btn);
-  }
+function toHashNow() { location.hash = "#/now"; }
+function toHashPermit(key) {
+  const norm = normalizePermitKey(key);
+  location.hash = `#/permit/${encodeURIComponent(norm)}`;
 }
-
-function extractFormalFromRowJson(rowJsonText) {
-  const d = parseJsonSafe(rowJsonText);
-  return String(d["FORMÅL"] ?? "").trim();
-}
-
-function valueOrDash(v) {
-  const t = String(v ?? "").trim();
-  return t ? t : "—";
+function toHashOwner(identity) {
+  location.hash = `#/owner/${encodeURIComponent(String(identity ?? "").trim())}`;
 }
 
 function formatKapNoTrailing00(kapRaw) {
   const t = String(kapRaw ?? "").trim();
   if (!t) return "";
-
-  // normaliser til punktum for parsing
-  const s = t.replace(",", ".");
-  if (!/^-?\d+(\.\d+)?$/.test(s)) return t;
-
-  const num = Number(s);
+  // Normaliser til punkt for parse
+  const normalized = t.replace(",", ".");
+  const num = Number(normalized);
   if (!Number.isFinite(num)) return t;
 
-  // Hvis heltall (inkl. .00 / ,00) -> ingen desimaler
-  if (Number.isInteger(num)) return String(num);
+  // Hvis heltall eller .00 -> uten desimal
+  if (Math.abs(num - Math.round(num)) < 1e-9) return String(Math.round(num));
 
-  // Ellers: fjern trailing nuller og bytt tilbake til komma
-  let out = String(num);
-  // noen ganger kan String(num) gi vitenskapelig notasjon; fallback:
-  if (out.includes("e") || out.includes("E")) out = num.toFixed(2);
-
-  out = out.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
-  return out.replace(".", ",");
+  // Ellers: behold desimal, men med komma
+  // Unngå for lang representasjon
+  const s = String(num);
+  return s.replace(".", ",");
 }
 
 // --- PERMIT empty state helpers ---
@@ -221,11 +167,9 @@ function setPermitEmptyStateVisible(visible) {
 function setPermitEmptyStateContent({ icon, title, text }) {
   const root = $("permitEmptyState");
   if (!root) return;
-
   const iconEl = root.querySelector(".empty-icon");
   const titleEl = root.querySelector(".empty-title");
   const textEl  = root.querySelector(".empty-text");
-
   if (iconEl && icon != null) iconEl.textContent = icon;
   if (titleEl && title != null) titleEl.textContent = title;
   if (textEl  && text  != null) textEl.textContent  = text;
@@ -236,7 +180,7 @@ function setPermitResultsVisible(visible) {
   if (split) split.classList.toggle("hidden", !visible);
 }
 
-// --- OWNER empty state helpers (lik permit) ---
+// --- OWNER empty/results helpers ---
 function setOwnerEmptyStateVisible(visible) {
   const el = $("ownerEmptyState");
   if (el) el.classList.toggle("hidden", !visible);
@@ -245,35 +189,37 @@ function setOwnerEmptyStateVisible(visible) {
 function setOwnerEmptyStateContent({ icon, title, text }) {
   const root = $("ownerEmptyState");
   if (!root) return;
-
   const iconEl = root.querySelector(".empty-icon");
   const titleEl = root.querySelector(".empty-title");
   const textEl  = root.querySelector(".empty-text");
-
   if (iconEl && icon != null) iconEl.textContent = icon;
   if (titleEl && title != null) titleEl.textContent = title;
   if (textEl  && text  != null) textEl.textContent  = text;
 }
 
 function setOwnerResultsVisible(visible) {
-  const root = $("ownerResults");
-  if (root) root.classList.toggle("hidden", !visible);
+  const el = $("ownerResults");
+  if (el) el.classList.toggle("hidden", !visible);
 }
 
+function setOwnerActiveEmptyMessage(text) {
+  const el = $("ownerActiveEmpty");
+  if (!el) return;
+  el.textContent = text || "";
+  el.classList.toggle("hidden", !text);
+}
 
-// --- clear helpers ---
 function clearPermitView() {
   setPermitResultsVisible(false);
   setPermitEmptyStateVisible(true);
 
-  const empty = $("permitEmpty");
-  if (empty) empty.textContent = "";
+  const legacy = $("permitEmpty");
+  if (legacy) legacy.textContent = "";
 
   const card = $("permitCard");
   if (card) card.classList.add("hidden");
 
   const tbody = safeEl("permitHistoryTable").querySelector("tbody");
-  if (!tbody) throw new Error("Mangler <tbody> i #permitHistoryTable");
   tbody.innerHTML = "";
 
   const reasonTh = $("permitReasonTh");
@@ -281,18 +227,62 @@ function clearPermitView() {
 }
 
 function clearOwnerView() {
+  // Skjul resultater, vis tom-tilstand
   setOwnerResultsVisible(false);
   setOwnerEmptyStateVisible(true);
 
-  safeEl("ownerEmpty").textContent = "";
-  safeEl("ownerCard").classList.add("hidden");
+  const ownerCard = $("ownerCard");
+  if (ownerCard) ownerCard.classList.add("hidden");
 
-  const a = safeEl("ownerActiveTable").querySelector("tbody");
-  const h = safeEl("ownerHistoryTable").querySelector("tbody");
-  if (!a) throw new Error("Mangler <tbody> i #ownerActiveTable");
-  if (!h) throw new Error("Mangler <tbody> i #ownerHistoryTable");
-  a.innerHTML = "";
-  h.innerHTML = "";
+  const ownerEmpty = $("ownerEmpty");
+  if (ownerEmpty) ownerEmpty.textContent = "";
+
+  setOwnerActiveEmptyMessage("");
+
+  const filters = $("ownerFormalFilters");
+  if (filters) filters.innerHTML = "";
+
+  const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
+  activeBody.innerHTML = "";
+
+  const histBody = safeEl("ownerHistoryTable").querySelector("tbody");
+  histBody.innerHTML = "";
+}
+
+// --- owner row_json FORMÅL helper ---
+function extractFormalFromRowJson(rowJsonText) {
+  const d = parseJsonSafe(rowJsonText);
+  return String(d["FORMÅL"] ?? "").trim();
+}
+
+// --- Owner formål filter buttons ---
+function renderOwnerFormalButtons(countsByFormal /* Map */) {
+  const root = $("ownerFormalFilters");
+  if (!root) return;
+
+  root.innerHTML = "";
+
+  if (!allFormals.length) return;
+
+  for (const formal of allFormals) {
+    const count = Number(countsByFormal.get(formal) || 0);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    // Viktig: disse klassene må matche CSS-en din (.filter-btn, .zero, .active)
+    btn.className = "filter-btn";
+    if (count === 0) btn.classList.add("zero");
+    if (ownerFilters.formal === formal) btn.classList.add("active");
+    btn.textContent = `${formal} (${count})`;
+
+    btn.addEventListener("click", () => {
+      ownerFilters.formal = (ownerFilters.formal === formal) ? null : formal;
+      const r = parseHash();
+      if (r.view === "owner") renderOwner(r.ident);
+    });
+
+    root.appendChild(btn);
+  }
 }
 
 // --- UNIFIED permit card renderer (ACTIVE + HISTORIC) ---
@@ -365,8 +355,7 @@ function renderPermitCardUnified({
   `;
 }
 
-
-// --- UNIFIED owner card renderer ---
+// --- UNIFIED owner card renderer (med blå/gul grunnrente-pill) ---
 function renderOwnerCardUnified({
   ownerName,
   ownerIdentity,
@@ -407,9 +396,7 @@ function renderOwnerCardUnified({
 }
 
 // --- sort state (NOW) ---
-const sortState = {
-  now: { key: "permit_key", dir: 1 }
-};
+const sortState = { now: { key: "permit_key", dir: 1 } };
 
 // --- load db ---
 async function loadDatabase() {
@@ -429,7 +416,7 @@ async function loadDatabase() {
   if (db) db.close();
   db = new SQL.Database(new Uint8Array(buf));
 
-    schema.permit_current_has_art = hasColumn("permit_current", "art");
+  schema.permit_current_has_art = hasColumn("permit_current", "art");
   schema.permit_snapshot_has_art = hasColumn("permit_snapshot", "art");
   schema.permit_snapshot_has_row_json = hasColumn("permit_snapshot", "row_json");
   schema.permit_snapshot_has_grunnrente = hasColumn("permit_snapshot", "grunnrente_pliktig");
@@ -450,8 +437,7 @@ async function loadDatabase() {
     allFormals = [];
   }
 
-  const snap = one(`SELECT MAX(snapshot_date) AS max_date, COUNT(*) AS n FROM snapshots;`);
-
+  const snap = one(`SELECT MAX(snapshot_date) AS max_date FROM snapshots;`);
   setStatus("DB lastet", "ok");
 
   const snapIso = snap?.max_date ? String(snap.max_date).slice(0, 10) : "";
@@ -505,7 +491,6 @@ function renderNow() {
     `Antall tillatelser i visningen: ${filtered.length}` + (only ? " (grunnrentepliktig)" : "");
 
   const tbody = safeEl("nowTable").querySelector("tbody");
-  if (!tbody) throw new Error("Mangler <tbody> i #nowTable");
   tbody.innerHTML = "";
 
   const MAX = 2500;
@@ -522,19 +507,17 @@ function renderNow() {
       ? String(r.owner_identity).trim()
       : "";
 
-    const ownerIdentNorm = ownerIdent.replace(/\s+/g, "");
     const permitHrefKey = normalizePermitKey(r.permit_key);
 
     tr.innerHTML = `
       <td><a class="link" href="#/permit/${encodeURIComponent(permitHrefKey)}">${escapeHtml(r.permit_key)}</a></td>
       <td>${escapeHtml(r.owner_name)}</td>
       <td>${
-        ownerIdentNorm
-          ? `<a class="link" href="#/owner/${encodeURIComponent(ownerIdentNorm)}">${escapeHtml(orgnrOrIdent)}</a>`
+        ownerIdent
+          ? `<a class="link" href="#/owner/${encodeURIComponent(ownerIdent)}">${escapeHtml(orgnrOrIdent)}</a>`
           : `${escapeHtml(orgnrOrIdent)}`
       }</td>
     `;
-
     tbody.appendChild(tr);
   }
 
@@ -572,14 +555,7 @@ function renderPermit(permitKey) {
 
   if (isNineDigits(raw)) {
     const msg = "Dette ser ut som et org.nr. (9 siffer). Bruk fanen Innehaver for org.nr., eller skriv et tillatelsesnr. (f.eks. H-F-0910).";
-    const legacy = $("permitEmpty");
-    if (legacy) legacy.textContent = msg;
-
-    setPermitEmptyStateContent({
-      icon: "ℹ️",
-      title: "Dette ser ut som org.nr.",
-      text: msg
-    });
+    setPermitEmptyStateContent({ icon: "ℹ️", title: "Dette ser ut som org.nr.", text: msg });
     setPermitEmptyStateVisible(true);
     return;
   }
@@ -628,7 +604,7 @@ function renderPermit(permitKey) {
   setPermitResultsVisible(true);
   setPermitEmptyStateVisible(false);
 
-  // Skal vi vise Årsak-kolonnen?
+  // Årsak-kolonne: vis hvis noen har årsak
   let showReasonColumn = false;
   for (let i = 0; i < hist.length; i++) {
     const r = hist[i];
@@ -647,10 +623,8 @@ function renderPermit(permitKey) {
     } else {
       reason = "Avsluttet";
     }
-
     if (reason) { showReasonColumn = true; break; }
   }
-
   const reasonTh = $("permitReasonTh");
   if (reasonTh) reasonTh.style.display = showReasonColumn ? "" : "none";
 
@@ -660,9 +634,7 @@ function renderPermit(permitKey) {
     const tb = iso10(hist[i].tidsbegrenset);
     if (tb) { tidsbegrensetCard = tb; break; }
   }
-  const tidsbegrensetCardDisplay = tidsbegrensetCard
-    ? formatNorwegianDate(tidsbegrensetCard)
-    : "";
+  const tidsbegrensetCardDisplay = tidsbegrensetCard ? formatNorwegianDate(tidsbegrensetCard) : "";
 
   if (now) {
     const rowDict = parseJsonSafe(now.row_json);
@@ -676,18 +648,10 @@ function renderPermit(permitKey) {
 
     const kapRaw = String(rowDict["TILL_KAP"] ?? "").trim();
     const enh = String(rowDict["TILL_ENHET"] ?? "").trim();
+    const kapFmt = formatKapNoTrailing00(kapRaw);
+    const kapasitet = kapFmt ? `${kapFmt}${enh ? " " + enh : ""}` : "";
 
-    let kap = kapRaw;
-    if (kapRaw && /^-?\d+([.,]\d+)?$/.test(kapRaw)) {
-      const num = Number(kapRaw.replace(",", "."));
-      if (Number.isFinite(num)) {
-        kap = Number.isInteger(num) ? String(Math.trunc(num)) : String(num).replace(".", ",");
-      }
-    }
-    const kapasitet = kap ? `${kap}${enh ? " " + enh : ""}` : "";
-
-    const prodOmrRaw = String(rowDict["PROD_OMR"] ?? "").trim();
-    const prodOmr = prodOmrRaw ? prodOmrRaw : "N/A";
+    const prodOmr = String(rowDict["PROD_OMR"] ?? "").trim() || "N/A";
 
     const grunnrente = Number(now.grunnrente_pliktig) === 1;
 
@@ -736,18 +700,10 @@ function renderPermit(permitKey) {
 
     const kapRaw = String(snapDict["TILL_KAP"] ?? "").trim();
     const enh = String(snapDict["TILL_ENHET"] ?? "").trim();
+    const kapFmt = formatKapNoTrailing00(kapRaw);
+    const kapasitet = kapFmt ? `${kapFmt}${enh ? " " + enh : ""}` : "";
 
-    let kap = kapRaw;
-    if (kapRaw && /^-?\d+([.,]\d+)?$/.test(kapRaw)) {
-      const num = Number(kapRaw.replace(",", "."));
-      if (Number.isFinite(num)) {
-        kap = Number.isInteger(num) ? String(Math.trunc(num)) : String(num).replace(".", ",");
-      }
-    }
-    const kapasitet = kap ? `${kap}${enh ? " " + enh : ""}` : "";
-
-    const prodOmrRaw = String(snapDict["PROD_OMR"] ?? "").trim();
-    const prodOmr = prodOmrRaw ? prodOmrRaw : "N/A";
+    const prodOmr = String(snapDict["PROD_OMR"] ?? "").trim() || "N/A";
 
     let grunnrenteValue = false;
     if (snapRow && snapRow.grunnrente_pliktig != null && snapRow.grunnrente_pliktig !== "") {
@@ -771,7 +727,7 @@ function renderPermit(permitKey) {
     });
   }
 
-  // --- Render history table ---
+  // Render history table
   const tbody = safeEl("permitHistoryTable").querySelector("tbody");
   tbody.innerHTML = "";
 
@@ -796,9 +752,7 @@ function renderPermit(permitKey) {
 
     const vf = displayDate(r.valid_from);
     const vtLabel = (r.valid_to_label === "Aktiv") ? "Aktiv" : displayDate(r.valid_to_label);
-
-    const identRaw = String(r.owner_identity ?? "").trim();
-    const ident = identRaw.replace(/\s+/g, "");
+    const ident = String(r.owner_identity ?? "").trim();
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -812,45 +766,8 @@ function renderPermit(permitKey) {
   }
 }
 
-let selectedOwnerFormal = null;
-
-function renderOwnerFormalButtons(countsByFormal) {
-  const root = $("ownerFormalFilters");
-  if (!root) return;
-
-  root.innerHTML = "";
-
-  for (const formal of allFormals) {
-    const count = Number(countsByFormal.get(formal) || 0);
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-
-    // ✅ RIKTIGE KLASSER
-    btn.className = "filter-btn";
-    if (count === 0) btn.classList.add("zero");
-    if (ownerFilters.formal === formal) btn.classList.add("active");
-
-    btn.textContent = `${formal} (${count})`;
-
-    btn.addEventListener("click", () => {
-      // toggle
-      ownerFilters.formal =
-        ownerFilters.formal === formal ? null : formal;
-
-      const r = parseHash();
-      if (r.view === "owner") renderOwner(r.ident);
-    });
-
-    root.appendChild(btn);
-  }
-}
-
-
 // --- OWNER view ---
 function renderOwner(ownerIdentity) {
-  console.log("renderOwner()", ownerIdentity);
-
   setActiveTab("tab-owner");
   showView("view-owner");
 
@@ -866,8 +783,7 @@ function renderOwner(ownerIdentity) {
   if (ownerIdentity != null) safeEl("ownerInput").value = String(ownerIdentity);
 
   const inputEl = safeEl("ownerInput");
-  const raw = String(ownerIdentity || "");
-  const identTrim = raw.trim();
+  const identTrim = String(ownerIdentity || "").trim();
 
   // Ingen input -> bare tom-tilstand
   if (!identTrim) {
@@ -888,10 +804,10 @@ function renderOwner(ownerIdentity) {
     return;
   }
 
-  const ownerIdentityNorm = identTrim;
+  const ownerIdentityNorm = identTrim.replace(/\s+/g, "");
   inputEl.value = ownerIdentityNorm;
 
-  // --- Owner stats: aktive (permit_current) + tidligere (unike permit_key som ikke lenger er aktive) ---
+  // Stats: aktive + tidligere (unike ikke-lenger-aktive)
   const stats = one(`
     WITH owner_rows AS (
       SELECT
@@ -933,7 +849,7 @@ function renderOwner(ownerIdentity) {
     return;
   }
 
-  // --- Active permits (for table + grunnrenteActiveCount) ---
+  // Active permits (for table + grunnrenteActiveCount)
   const active = execAll(`
     SELECT
       permit_key AS permit_key,
@@ -945,49 +861,7 @@ function renderOwner(ownerIdentity) {
     ORDER BY permit_key;
   `, [ownerIdentityNorm]);
 
-  // (valgfritt) denne trenger du ikke lenger hvis du bruker parseHash i click handler
-  // window.__currentOwnerIdentity = ownerIdentityNorm;
-
-  // grunnrente-filter for aktiv-tabellen
-  const onlyGrunnrente = $("ownerOnlyGrunnrente")?.checked === true;
-  const activeAfterGrunnrente = onlyGrunnrente
-    ? active.filter(r => Number(r.grunnrente_pliktig) === 1)
-    : active;
-
-  // counts per formål (til knappene) — bygges fra activeAfterGrunnrente
-  const countsByFormal = new Map();
-  for (const r of activeAfterGrunnrente) {
-    const d = parseJsonSafe(r.row_json);
-    const f = String(d["FORMÅL"] ?? "").trim();
-    if (!f) continue;
-    countsByFormal.set(f, (countsByFormal.get(f) || 0) + 1);
-  }
-
-  // Render formål-knapper
-  renderOwnerFormalButtons(countsByFormal);
-
-  // formål-filter
-  const selectedFormal = ownerFilters.formal;
-  const activeDisplay = selectedFormal
-    ? activeAfterGrunnrente.filter(r => {
-        const d = parseJsonSafe(r.row_json);
-        return String(d["FORMÅL"] ?? "").trim() === selectedFormal;
-      })
-    : activeAfterGrunnrente;
-
-  // tom-melding når filter gir 0 treff
-  if (activeDisplay.length === 0) {
-    setOwnerActiveEmptyMessage("Ingen tillatelser funnet");
-  } else {
-    setOwnerActiveEmptyMessage("");
-    }
-
-
-
-  const grunnrenteActiveCount = active.reduce((acc, r) =>
-    acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0)
-  , 0);
-
+  const grunnrenteActiveCount = active.reduce((acc, r) => acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0), 0);
 
   // Treffer: skjul tom-tilstand, vis resultater
   setOwnerEmptyStateVisible(false);
@@ -1002,81 +876,93 @@ function renderOwner(ownerIdentity) {
     formerPermitCount: Number(stats.former_permits ?? 0),
   });
 
-  // Render active table
-  // ✅ Punkt 4: tom-melding når filter gir 0 treff
+  // --- FILTER: grunnrente + formål (kun for aktiv-tabellen) ---
+  const onlyGrunnrente = $("ownerOnlyGrunnrente")?.checked === true;
+
+  const activeAfterGrunnrente = onlyGrunnrente
+    ? active.filter(r => Number(r.grunnrente_pliktig) === 1)
+    : active;
+
+  // counts per formål (for knapper)
+  const countsByFormal = new Map();
+  for (const r of activeAfterGrunnrente) {
+    const f = extractFormalFromRowJson(r.row_json);
+    if (!f) continue;
+    countsByFormal.set(f, (countsByFormal.get(f) || 0) + 1);
+  }
+  renderOwnerFormalButtons(countsByFormal);
+
+  // formål-filter
+  const selectedFormal = ownerFilters.formal;
+  const activeDisplay = selectedFormal
+    ? activeAfterGrunnrente.filter(r => extractFormalFromRowJson(r.row_json) === selectedFormal)
+    : activeAfterGrunnrente;
+
+  // tom-melding ved 0 treff i aktiv-tabellen
   if (activeDisplay.length === 0) {
     setOwnerActiveEmptyMessage("Ingen tillatelser funnet");
   } else {
     setOwnerActiveEmptyMessage("");
   }
 
-const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
-activeBody.innerHTML = "";
+  // Render active table
+  const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
+  activeBody.innerHTML = "";
 
   for (const r of activeDisplay) {
-  const rowDict = parseJsonSafe(r.row_json);
+    const rowDict = parseJsonSafe(r.row_json);
 
-  const prodOmr = String(rowDict["PROD_OMR"] ?? "").trim();
+    const prodOmr = String(rowDict["PROD_OMR"] ?? "").trim();
 
-  const artRaw = (r.art && String(r.art).trim())
-  ? String(r.art).trim()
-  : String(rowDict["ART"] ?? "").trim();
+    const artRaw = (r.art && String(r.art).trim())
+      ? String(r.art).trim()
+      : String(rowDict["ART"] ?? "").trim();
 
-  let art = artRaw;
-
-  if (artRaw) {
-    const parts = artRaw
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    if (parts.length > 3) {
-      art = `${parts.slice(0, 3).join(", ")}*`;
-    } else {
-      art = parts.join(", ");
+    // maks 3 arter + *
+    let art = artRaw;
+    if (artRaw) {
+      const parts = artRaw.split(",").map(s => s.trim()).filter(Boolean);
+      if (parts.length > 3) art = `${parts.slice(0, 3).join(", ")}*`;
+      else art = parts.join(", ");
     }
+
+    const formal = String(rowDict["FORMÅL"] ?? "").trim();
+    const produksjonsform = String(rowDict["PRODUKSJONSFORM"] ?? "").trim();
+
+    const kapRaw = String(rowDict["TILL_KAP"] ?? "").trim();
+    const enh = String(rowDict["TILL_ENHET"] ?? "").trim();
+    const kapFmt = formatKapNoTrailing00(kapRaw);
+    const kapasitet = kapFmt ? `${kapFmt}${enh ? " " + enh : ""}` : "";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><a class="link" href="#/permit/${encodeURIComponent(normalizePermitKey(r.permit_key))}">${escapeHtml(r.permit_key)}</a></td>
+      <td>${escapeHtml(art)}</td>
+      <td>${escapeHtml(formal)}</td>
+      <td>${escapeHtml(produksjonsform)}</td>
+      <td>${escapeHtml(kapasitet)}</td>
+      <td>${escapeHtml(prodOmr || "N/A")}</td>
+    `;
+    activeBody.appendChild(tr);
   }
 
-
-  const formal = String(rowDict["FORMÅL"] ?? "").trim();
-  const produksjonsform = String(rowDict["PRODUKSJONSFORM"] ?? "").trim();
-  const kapRaw = String(rowDict["TILL_KAP"] ?? "").trim();
-  const enh = String(rowDict["TILL_ENHET"] ?? "").trim();
-
-  const kapFmt = formatKapNoTrailing00(kapRaw);
-  const kapasitet = kapFmt ? `${kapFmt}${enh ? " " + enh : ""}` : "";
-
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td><a class="link" href="#/permit/${encodeURIComponent(normalizePermitKey(r.permit_key))}">${escapeHtml(r.permit_key)}</a></td>
-    <td>${escapeHtml(art)}</td>
-    <td>${escapeHtml(formal)}</td>
-    <td>${escapeHtml(produksjonsform)}</td>
-    <td>${escapeHtml(kapasitet)}</td>
-    <td>${escapeHtml(prodOmr || "N/A")}</td>
-  `;
-  activeBody.appendChild(tr);
-}
-
-
-  // Owner history table
+  // Historikk: kun avsluttede perioder (Gyldig til = dato)
   const hist = execAll(`
-  SELECT
-    permit_key AS permit_key,
-    valid_from AS valid_from,
-    valid_to   AS valid_to,
-    COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
-    owner_name AS owner_name,
-    owner_orgnr AS owner_orgnr,
-    tidsbegrenset AS tidsbegrenset
-  FROM ownership_history
-  WHERE
-    REPLACE(TRIM(owner_identity), ' ', '') = ?
-    AND valid_to IS NOT NULL
-    AND valid_to <> ''
-  ORDER BY permit_key, date(valid_from), id;
-`, [ownerIdentityNorm]);
-
+    SELECT
+      permit_key AS permit_key,
+      valid_from AS valid_from,
+      valid_to   AS valid_to,
+      COALESCE(NULLIF(valid_to,''), 'Aktiv') AS valid_to_label,
+      owner_name AS owner_name,
+      owner_orgnr AS owner_orgnr,
+      tidsbegrenset AS tidsbegrenset
+    FROM ownership_history
+    WHERE
+      REPLACE(TRIM(owner_identity), ' ', '') = ?
+      AND valid_to IS NOT NULL
+      AND TRIM(valid_to) <> ''
+    ORDER BY permit_key, date(valid_from), id;
+  `, [ownerIdentityNorm]);
 
   const histBody = safeEl("ownerHistoryTable").querySelector("tbody");
   histBody.innerHTML = "";
@@ -1102,7 +988,7 @@ activeBody.innerHTML = "";
     if (!reason) reason = "--";
 
     const vf = displayDate(r.valid_from);
-    const vtLabel = (r.valid_to_label === "Aktiv") ? "Aktiv" : displayDate(r.valid_to_label);
+    const vtLabel = displayDate(r.valid_to_label); // alltid dato her
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -1138,7 +1024,6 @@ function parseHash() {
 }
 
 function renderRoute() {
-  console.log("renderRoute()", location.hash);
   if (!db) return;
   const r = parseHash();
   if (r.view === "now") return renderNow();
@@ -1149,12 +1034,9 @@ function renderRoute() {
 
 // --- events ---
 function wireEvents() {
-  window.addEventListener("hashchange", () => {
-    console.log("hashchange ->", location.hash);
-    renderRoute();
-  });
+  window.addEventListener("hashchange", () => renderRoute());
 
-  // NOW search (debounced)
+  // NOW
   let nowTimer = null;
   safeEl("nowSearch").addEventListener("input", () => {
     clearTimeout(nowTimer);
@@ -1162,10 +1044,9 @@ function wireEvents() {
   });
   safeEl("onlyGrunnrente").addEventListener("change", () => renderNow());
 
-  // PERMIT actions
+  // PERMIT
   safeEl("permitGo").addEventListener("click", () => {
     const raw = safeEl("permitInput").value;
-
     if (!String(raw || "").trim()) {
       clearPermitView();
       setPermitEmptyStateContent({
@@ -1176,7 +1057,6 @@ function wireEvents() {
       setPermitEmptyStateVisible(true);
       return;
     }
-
     if (isNineDigits(raw)) {
       clearPermitView();
       setPermitEmptyStateContent({
@@ -1187,7 +1067,6 @@ function wireEvents() {
       setPermitEmptyStateVisible(true);
       return;
     }
-
     toHashPermit(raw);
   });
 
@@ -1195,7 +1074,6 @@ function wireEvents() {
     if (e.key === "Enter") safeEl("permitGo").click();
   });
 
-  // Tøm permit-visning når input slettes
   safeEl("permitInput").addEventListener("input", (e) => {
     const v = String(e.target.value || "").trim();
     if (!v) {
@@ -1210,7 +1088,7 @@ function wireEvents() {
     }
   });
 
-  // OWNER actions
+  // OWNER
   safeEl("ownerGo").addEventListener("click", () => {
     const ident = safeEl("ownerInput").value.trim();
 
@@ -1226,8 +1104,7 @@ function wireEvents() {
       return;
     }
 
-    // Strengt krav i UI: 9 siffer uten mellomrom
-    if (!/^[0-9]{9}$/.test(ident)) {
+    if (!isNineDigits(ident)) {
       clearOwnerView();
       setOwnerEmptyStateContent({
         icon: "⚠️",
@@ -1239,17 +1116,18 @@ function wireEvents() {
       return;
     }
 
-    toHashOwner(ident);
+    ownerFilters.formal = null; // reset formål-filter ved nytt søk
+    toHashOwner(ident.replace(/\s+/g, ""));
   });
 
   safeEl("ownerInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") safeEl("ownerGo").click();
   });
 
-  // Tøm owner-visning når input slettes
   safeEl("ownerInput").addEventListener("input", (e) => {
     const v = e.target.value.trim();
     if (!v) {
+      ownerFilters.formal = null;
       clearOwnerView();
       setOwnerEmptyStateContent({
         icon: "🔍",
@@ -1261,20 +1139,21 @@ function wireEvents() {
       location.hash = "#/owner";
     }
   });
+
+  // Re-render owner view når checkbox endres (grunnrente filter)
+  const ownerOnly = $("ownerOnlyGrunnrente");
+  if (ownerOnly) {
+    ownerOnly.addEventListener("change", () => {
+      const r = parseHash();
+      if (r.view === "owner") renderOwner(r.ident);
+    });
+  }
 }
 
 function showError(err) {
   console.error(err);
   setStatus("Feil ved lasting", "bad");
   setMeta(String(err?.message || err));
-}
-
-const ownerOnly = $("ownerOnlyGrunnrente");
-if (ownerOnly) {
-  ownerOnly.addEventListener("change", () => {
-    const r = parseHash();
-    if (r.view === "owner") renderOwner(r.ident);
-  });
 }
 
 // --- main ---
