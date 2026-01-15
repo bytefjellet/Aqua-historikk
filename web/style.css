@@ -380,7 +380,6 @@ a:visited { color: inherit; }
   gap: 8px;
   margin: 8px 0 10px;
 }
-
 .filter-btn {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -389,7 +388,6 @@ a:visited { color: inherit; }
   padding: 6px 10px;
   font-size: .85rem;
   cursor: pointer;
-  user-select: none;
 }
 
 .filter-btn:hover {
@@ -397,15 +395,15 @@ a:visited { color: inherit; }
 }
 
 .filter-btn.active {
-  border-color: var(--primary);
   background: var(--primary-soft);
+  border-color: var(--primary);
   color: var(--primary);
 }
 
-/* Formål-knapp med 0 treff: dempet blå */
+/* 🔵 DEMPA BLÅ FOR (0) */
 .filter-btn.zero {
-  border-color: #cfe0ff;
   background: #f2f7ff;
+  border-color: #cfe0ff;
   color: #2b5fd9;
-  opacity: 0.7;
+  opacity: 0.65;
 }

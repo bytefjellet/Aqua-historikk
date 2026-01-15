@@ -815,33 +815,37 @@ function renderPermit(permitKey) {
 let selectedOwnerFormal = null;
 
 function renderOwnerFormalButtons(countsByFormal) {
-  const root = document.getElementById("ownerFormalFilters");
+  const root = $("ownerFormalFilters");
   if (!root) return;
 
   root.innerHTML = "";
 
   for (const formal of allFormals) {
-    const count = countsByFormal[formal] || 0;
+    const count = Number(countsByFormal.get(formal) || 0);
 
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "button button--chip";
+
+    // ✅ RIKTIGE KLASSER
+    btn.className = "filter-btn";
+    if (count === 0) btn.classList.add("zero");
+    if (ownerFilters.formal === formal) btn.classList.add("active");
+
     btn.textContent = `${formal} (${count})`;
 
-    if (selectedOwnerFormal === formal) {
-      btn.classList.add("active");
-    }
-
     btn.addEventListener("click", () => {
-      selectedOwnerFormal =
-        selectedOwnerFormal === formal ? null : formal;
+      // toggle
+      ownerFilters.formal =
+        ownerFilters.formal === formal ? null : formal;
 
-      renderOwner(window.__currentOwnerIdentity);
+      const r = parseHash();
+      if (r.view === "owner") renderOwner(r.ident);
     });
 
     root.appendChild(btn);
   }
 }
+
 
 // --- OWNER view ---
 function renderOwner(ownerIdentity) {
@@ -946,7 +950,7 @@ function renderOwner(ownerIdentity) {
 
 // Bygg telling per formål (etter ev. grunnrente-filter)
   const countsByFormal = {};
-  for (const r of active) {
+  for (const r of activeDisplay) {
     const d = parseJsonSafe(r.row_json);
     const f = String(d["FORMÅL"] ?? "").trim();
     if (!f) continue;
@@ -981,8 +985,15 @@ function renderOwner(ownerIdentity) {
   });
 
   // Render active table
-  const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
-  activeBody.innerHTML = "";
+  // ✅ Punkt 4: tom-melding når filter gir 0 treff
+  if (activeDisplay.length === 0) {
+    setOwnerActiveEmptyMessage("Ingen tillatelser funnet");
+  } else {
+    setOwnerActiveEmptyMessage("");
+  }
+
+const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
+activeBody.innerHTML = "";
 
   for (const r of activeDisplay) {
   const rowDict = parseJsonSafe(r.row_json);
