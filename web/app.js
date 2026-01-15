@@ -882,9 +882,25 @@ function renderOwner(ownerIdentity) {
 
   const prodOmr = String(rowDict["PROD_OMR"] ?? "").trim();
 
-  const art = (r.art && String(r.art).trim())
-    ? String(r.art).trim()
-    : String(rowDict["ART"] ?? "").trim();
+  const artRaw = (r.art && String(r.art).trim())
+  ? String(r.art).trim()
+  : String(rowDict["ART"] ?? "").trim();
+
+  let art = artRaw;
+
+  if (artRaw) {
+    const parts = artRaw
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (parts.length > 3) {
+      art = `${parts.slice(0, 3).join(", ")}*`;
+    } else {
+      art = parts.join(", ");
+    }
+  }
+
 
   const formal = String(rowDict["FORMÅL"] ?? "").trim();
   const produksjonsform = String(rowDict["PRODUKSJONSFORM"] ?? "").trim();
