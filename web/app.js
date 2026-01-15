@@ -323,9 +323,10 @@ function renderOwnerCardUnified({
 
       <div style="margin-top:10px">
         <div><span class="muted">Aktive tillatelser:</span> ${escapeHtml(String(activeCount ?? 0))}</div>
-        <div><span class="muted">Tidligere tillatelser:</span> ${escapeHtml(String(formerPermitCount ?? 0))}</div>
-        <div><span class="muted">Grunnrentepliktige (aktive):</span> ${escapeHtml(String(grunnrenteActiveCount ?? 0))}</div>
+        <div><span class="muted">Grunnrentepliktige tillatelser:</span> ${escapeHtml(String(grunnrenteActiveCount ?? 0))}</div>
+        <div><span class="muted">Historiske tillatelser:</span> ${escapeHtml(String(formerPermitCount ?? 0))}</div>
       </div>
+
     </div>
   `;
 }
@@ -821,6 +822,12 @@ function renderOwner(ownerIdentity) {
     acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0)
   , 0);
 
+  const onlyGrunnrente = $("ownerOnlyGrunnrente")?.checked === true;
+  const activeDisplay = onlyGrunnrente
+  ? active.filter(r => Number(r.grunnrente_pliktig) === 1)
+  : active;
+
+
   // Treffer: skjul tom-tilstand, vis resultater
   setOwnerEmptyStateVisible(false);
   setOwnerResultsVisible(true);
@@ -838,7 +845,7 @@ function renderOwner(ownerIdentity) {
   const activeBody = safeEl("ownerActiveTable").querySelector("tbody");
   activeBody.innerHTML = "";
 
-  for (const r of active) {
+  for (const r of activeDisplay) {
     const rowDict = parseJsonSafe(r.row_json);
 
     const art = (r.art && String(r.art).trim())
@@ -1069,6 +1076,14 @@ function showError(err) {
   console.error(err);
   setStatus("Feil ved lasting", "bad");
   setMeta(String(err?.message || err));
+}
+
+const ownerOnly = $("ownerOnlyGrunnrente");
+if (ownerOnly) {
+  ownerOnly.addEventListener("change", () => {
+    const r = parseHash();
+    if (r.view === "owner") renderOwner(r.ident);
+  });
 }
 
 // --- main ---
