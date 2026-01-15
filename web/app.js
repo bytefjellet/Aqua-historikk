@@ -323,7 +323,7 @@ function renderPermitCardUnified({
   `;
 }
 
-// --- UNIFIED owner card renderer (uten piller, uten lenke i overskrift) ---
+// --- UNIFIED owner card renderer ---
 function renderOwnerCardUnified({
   ownerName,
   ownerIdentity,
@@ -337,10 +337,18 @@ function renderOwnerCardUnified({
   const name = valueOrDash(ownerName);
   const ident = String(ownerIdentity ?? "").trim();
 
+  const hasGrunnrente = Number(grunnrenteActiveCount ?? 0) > 0;
+
   card.innerHTML = `
     <div style="font-size:1.1rem;font-weight:700">
       ${escapeHtml(name)}
     </div>
+
+    ${hasGrunnrente ? `
+      <div class="pills" style="margin-top:8px">
+        <span class="pill pill--blue">Grunnrentepliktig</span>
+      </div>
+    ` : ""}
 
     <div style="margin-top:10px">
       <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
@@ -350,10 +358,10 @@ function renderOwnerCardUnified({
         <div><span class="muted">Grunnrentepliktige tillatelser:</span> ${escapeHtml(String(grunnrenteActiveCount ?? 0))}</div>
         <div><span class="muted">Historiske tillatelser:</span> ${escapeHtml(String(formerPermitCount ?? 0))}</div>
       </div>
-
     </div>
   `;
 }
+
 
 // --- sort state (NOW) ---
 const sortState = {
