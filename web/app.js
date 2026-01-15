@@ -945,30 +945,48 @@ function renderOwner(ownerIdentity) {
     ORDER BY permit_key;
   `, [ownerIdentityNorm]);
 
-  // Husk hvem vi rendrer (brukes av knappene)
-  window.__currentOwnerIdentity = ownerIdentity;
+  // (valgfritt) denne trenger du ikke lenger hvis du bruker parseHash i click handler
+  // window.__currentOwnerIdentity = ownerIdentityNorm;
 
-// Bygg telling per formål (etter ev. grunnrente-filter)
-  const countsByFormal = {};
-  for (const r of activeDisplay) {
+  // grunnrente-filter for aktiv-tabellen
+  const onlyGrunnrente = $("ownerOnlyGrunnrente")?.checked === true;
+  const activeAfterGrunnrente = onlyGrunnrente
+    ? active.filter(r => Number(r.grunnrente_pliktig) === 1)
+    : active;
+
+  // counts per formål (til knappene) — bygges fra activeAfterGrunnrente
+  const countsByFormal = new Map();
+  for (const r of activeAfterGrunnrente) {
     const d = parseJsonSafe(r.row_json);
     const f = String(d["FORMÅL"] ?? "").trim();
     if (!f) continue;
-    countsByFormal[f] = (countsByFormal[f] || 0) + 1;
+    countsByFormal.set(f, (countsByFormal.get(f) || 0) + 1);
   }
 
-// Render formål-knapper
+  // Render formål-knapper
   renderOwnerFormalButtons(countsByFormal);
+
+  // formål-filter
+  const selectedFormal = ownerFilters.formal;
+  const activeDisplay = selectedFormal
+    ? activeAfterGrunnrente.filter(r => {
+        const d = parseJsonSafe(r.row_json);
+        return String(d["FORMÅL"] ?? "").trim() === selectedFormal;
+      })
+    : activeAfterGrunnrente;
+
+  // tom-melding når filter gir 0 treff
+  if (activeDisplay.length === 0) {
+    setOwnerActiveEmptyMessage("Ingen tillatelser funnet");
+  } else {
+    setOwnerActiveEmptyMessage("");
+    }
+
 
 
   const grunnrenteActiveCount = active.reduce((acc, r) =>
     acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0)
   , 0);
-
-  const onlyGrunnrente = $("ownerOnlyGrunnrente")?.checked === true;
-  const activeDisplay = onlyGrunnrente
-  ? active.filter(r => Number(r.grunnrente_pliktig) === 1)
-  : active;
 
 
   // Treffer: skjul tom-tilstand, vis resultater
