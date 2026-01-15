@@ -110,97 +110,72 @@
 
     <!-- OWNER -->
     <section id="view-owner" class="view">
-      <h2>Innehaver</h2>
+  <h2>Innehaver</h2>
 
-      <div class="controls">
-        <input id="ownerInput" class="input" placeholder="Skriv org.nr. (9 siffer) …" />
-        <button id="ownerGo" class="button" type="button">Søk</button>
+  <div class="controls">
+    <input id="ownerInput" class="input" placeholder="Skriv org.nr. (9 siffer) …" />
+    <button id="ownerGo" class="button" type="button">Søk</button>
 
-        <label class="checkbox">
-          <input id="ownerOnlyGrunnrente" type="checkbox" />
-          Kun grunnrentepliktige (aktive)
-        </label>
-      </div>
-
-
-      <!-- Tom-tilstand lik permit -->
-      <div id="ownerEmptyState" class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <div class="empty-title">Søk etter innehaver</div>
-        <div class="empty-text">
-          Skriv et org.nr. (9 siffer) i feltet over for å se aktive tillatelser og historikk.
-        </div>
-      </div>
-
-      <div class="split">
-        <div class="split-left">
-          <div id="ownerCard" class="card hidden"></div>
-          <div id="ownerEmpty" class="muted" style="margin-top:10px"></div>
-        </div>
-
-        <div id="ownerResults" class="owner-results hidden">
-  <div class="owner-card-wrap">
-    <div id="ownerCard" class="card hidden"></div>
-    <div id="ownerEmpty" class="muted" style="margin-top:10px"></div>
+    <label class="checkbox">
+      <input id="ownerOnlyGrunnrente" type="checkbox" />
+      Kun grunnrentepliktige (aktive)
+    </label>
   </div>
 
-        <div class="owner-tables">
-          <h3>Aktive tillatelser nå</h3>
-          <div class="table-wrap">
-            <table class="table" id="ownerActiveTable">
-              <thead>
-                <tr>
-                  <th>Tillatelse</th>
-                  <th>Art</th>
-                  <th>Formål</th>
-                  <th>Produksjonsstadium</th>
-                  <th>Tillatelseskapasitet</th>
-                  <th>Produksjonsområde</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+  <!-- Tom-tilstand lik permit -->
+  <div id="ownerEmptyState" class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">Søk etter innehaver</div>
+    <div class="empty-text">
+      Skriv et org.nr. (9 siffer) i feltet over for å se aktive tillatelser og historikk.
+    </div>
+  </div>
 
-          <h3 style="margin-top:18px">Historikk</h3>
-          <div class="table-wrap">
-            <table class="table" id="ownerHistoryTable">
-              <thead>
-                <tr>
-                  <th>Tillatelse</th>
-                  <th>Gyldig fra</th>
-                  <th>Gyldig til</th>
-                  <th>Årsak</th>
-                  <th>Eiernavn</th>
-                  <th>Org.nr.</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
+  <!-- Resultat (skjules til det finnes treff) -->
+  <div id="ownerResults" class="owner-results hidden">
+    <div class="owner-card-wrap">
+      <div id="ownerCard" class="card hidden"></div>
+      <div id="ownerEmpty" class="muted" style="margin-top:10px"></div>
+    </div>
+
+    <div class="owner-tables">
+      <h3>Aktive tillatelser nå</h3>
+      <div class="table-wrap">
+        <table class="table" id="ownerActiveTable">
+          <thead>
+            <tr>
+              <th>Tillatelse</th>
+              <th>Art</th>
+              <th>Formål</th>
+              <th>Produksjonsstadium</th>
+              <th>Tillatelseskapasitet</th>
+              <th>Produksjonsområde</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
 
-
-          <h3 style="margin-top:18px">Historikk</h3>
-          <div class="table-wrap">
-            <table class="table" id="ownerHistoryTable">
-              <thead>
-                <tr>
-                  <th>Tillatelse</th>
-                  <th>Gyldig fra</th>
-                  <th>Gyldig til</th>
-                  <th>Årsak</th>
-                  <th>Eiernavn</th>
-                  <th>Org.nr.</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
+      <h3 style="margin-top:18px">Historikk</h3>
+      <div class="table-wrap">
+        <table class="table" id="ownerHistoryTable">
+          <thead>
+            <tr>
+              <th>Tillatelse</th>
+              <th>Gyldig fra</th>
+              <th>Gyldig til</th>
+              <th>Årsak</th>
+              <th>Eiernavn</th>
+              <th>Org.nr.</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
+
   </main>
 
   <footer class="footer">
