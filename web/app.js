@@ -1167,6 +1167,11 @@ function parseHash() {
   }
 
   return { view: "now" };
+
+  if (parts[0] === "history") {
+  return { view: "history" };
+}
+
 }
 
 function renderRoute() {
@@ -1175,8 +1180,10 @@ function renderRoute() {
   if (r.view === "now") return renderNow();
   if (r.view === "permit") return renderPermit(r.key);
   if (r.view === "owner") return renderOwner(r.ident);
+  if (r.view === "history") return renderHistory(); // 👈 NY
   renderNow();
 }
+
 
 // --- events ---
 function wireEvents() {

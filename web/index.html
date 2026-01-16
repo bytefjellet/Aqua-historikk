@@ -31,6 +31,8 @@
       <a id="tab-now" class="tab" href="#/now" role="tab">Gjeldende status</a>
       <a id="tab-permit" class="tab" href="#/permit" role="tab">Tillatelse</a>
       <a id="tab-owner" class="tab" href="#/owner" role="tab">Innehaver</a>
+      <div id="tab-history" class="tab">Historikk</div>
+
     </div>
   </nav>
 
@@ -178,6 +180,30 @@
       </div>
     </div>
   </div>
+  <div id="view-history" class="view">
+  <div class="container">
+    <h2>Historiske tillatelser</h2>
+
+    <div class="controls">
+      <input id="historySearch" class="input" placeholder="Søk tillatelse eller innehaver…" />
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" id="historyTable">
+        <thead>
+          <tr>
+            <th>Tillatelse</th>
+            <th>Siste innehaver</th>
+            <th>Org.nr.</th>
+            <th>Gyldig til</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </section>
 
   </main>
