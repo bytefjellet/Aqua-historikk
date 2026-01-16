@@ -482,11 +482,12 @@ function renderOwnerCardUnified({
   const ident = String(ownerIdentity ?? "").trim();
 
   function fmtTN(n) {
-    if (!n || n <= 0) return "";
-    // rund av til heltall – endre hvis du vil ha desimaler
-    return ` (${Math.round(n).toLocaleString("nb-NO")} TN)`;
-  }
-  
+  const v = Number(n || 0);
+  return ` (${Math.round(v).toLocaleString("nb-NO")} TN)`;
+}
+  console.log("activeCapacityTN:", activeCapacityTN, "grunnrenteCapacityTN:", grunnrenteCapacityTN);
+
+
   const grunnCount = Number(grunnrenteActiveCount ?? 0);
   const grunnPillHtml = grunnCount > 0
     ? `<span class="pill pill--blue">Grunnrentepliktig</span>`
