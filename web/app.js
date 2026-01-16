@@ -162,6 +162,16 @@ function normUpper(s) {
   return (s ?? "").toString().trim().toUpperCase();
 }
 
+function normStage(s) {
+  return (s ?? "")
+    .toString()
+    .toUpperCase()
+    .replace(/[–—]/g, "-")      // lang dash → vanlig dash
+    .replace(/\s*-\s*/g, " - ") // alltid mellomrom rundt -
+    .replace(/\s+/g, " ")       // komprimer whitespace
+    .trim();
+}
+
 function toArray(val) {
   if (val == null) return [];
   if (Array.isArray(val)) return val;
@@ -188,17 +198,18 @@ function isBlueFormal(formalValue) {
 const BLUE_STAGE = new Set([
   "MATFISK",
   "MATFISK - (5% MTB ØKNING)",
-  "MATFISK -GRMNN A",
-  "MATFISK -GRØNN A(5% MTB ØKNING)",
-  "MATFISK -GRØNN B",
-  "MATFISK -GRØNN C",
-  "MATFISK -GRØNN KONVERTERT",
+  "MATFISK - GRØNN A",
+  "MATFISK - GRØNN A(5% MTB ØKNING)",
+  "MATFISK - GRØNN B",
+  "MATFISK - GRØNN C",
+  "MATFISK - GRØNN KONVERTERT",
   "ØKOLOGISK MATFISK",
 ].map(normUpper));
 
 function isBlueProduksjonsstadium(stageValue) {
-  return BLUE_STAGE.has(normUpper(stageValue));
+  return BLUE_STAGE.has(normStage(stageValue));
 }
+
 
 function pillSpanByRule(text, isBlue) {
   if (!String(text ?? "").trim()) return "";
