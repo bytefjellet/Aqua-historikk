@@ -283,7 +283,7 @@ h3 { margin: 0 0 8px; }
 }
 .muted-small {
   color: var(--muted);
-  font-size: 0.75rem; /* litt mindre enn .muted (.85rem) */
+  font-size: 0.8rem; /* litt mindre enn .muted (.85rem) */
 }
 
 /* =========================
