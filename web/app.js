@@ -1169,7 +1169,7 @@ function parseHash() {
 
   return { view: "now" };
 
-  if (parts[0] === "history") {
+  if (parts[0] === "history" || parts[0] === "historikk") {
   return { view: "history" };
 }
 
