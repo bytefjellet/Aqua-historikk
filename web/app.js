@@ -1157,67 +1157,94 @@ const grunnrenteCapacityTN = active.reduce(
 }
 
 // --- HISTORY view ---
+// --- HISTORY view ---
 function renderHistory() {
   setActiveTab("tab-history");
   showView("view-history");
 
   const q = $("historySearch")?.value.trim().toLowerCase() || "";
+  const onlyGr = $("historyOnlyGrunnrente")?.checked === true;
 
-  // Hent siste avsluttede periode per permit_key
-  // og filtrer bort de som fortsatt finnes i permit_current (for å være helt sikker på "historisk")
   const rows = execAll(`
-  WITH ended AS (
+    WITH ended AS (
+      SELECT
+        permit_key,
+        owner_name,
+        owner_identity,
+        valid_to
+      FROM ownership_history
+      WHERE valid_to IS NOT NULL
+        AND TRIM(valid_to) <> ''
+    ),
+    last_end AS (
+      SELECT
+        permit_key,
+        MAX(valid_to) AS last_valid_to
+      FROM ended
+      GROUP BY permit_key
+    ),
+    last_owner AS (
+      SELECT
+        e.permit_key,
+        e.owner_name,
+        e.owner_identity,
+        e.valid_to
+      FROM ended e
+      JOIN last_end le
+        ON le.permit_key = e.permit_key
+       AND le.last_valid_to = e.valid_to
+    ),
+    last_snap AS (
+      SELECT
+        permit_key,
+        MAX(snapshot_date) AS last_snapshot_date
+      FROM permit_snapshot
+      GROUP BY permit_key
+    ),
+    snap_gr AS (
+      SELECT
+        ps.permit_key,
+        ps.grunnrente_pliktig
+      FROM permit_snapshot ps
+      JOIN last_snap ls
+        ON ls.permit_key = ps.permit_key
+       AND ls.last_snapshot_date = ps.snapshot_date
+    )
     SELECT
-      permit_key,
-      owner_name,
-      owner_identity,
-      valid_to
-    FROM ownership_history
-    WHERE valid_to IS NOT NULL
-      AND TRIM(valid_to) <> ''
-  ),
-  last_end AS (
-    SELECT
-      permit_key,
-      MAX(valid_to) AS last_valid_to
-    FROM ended
-    GROUP BY permit_key
-  ),
-  last_row AS (
-    SELECT
-      e.permit_key,
-      e.owner_name,
-      e.owner_identity,
-      e.valid_to
-    FROM ended e
-    JOIN last_end le
-      ON le.permit_key = e.permit_key
-     AND le.last_valid_to = e.valid_to
-  )
-  SELECT
-    lr.permit_key AS permit_key,
-    lr.owner_name AS owner_name,
-    lr.owner_identity AS owner_identity,
-    lr.valid_to AS valid_to
-  FROM last_row lr
-  LEFT JOIN permit_current pc
-    ON UPPER(REPLACE(TRIM(pc.permit_key), ' ', '')) = UPPER(REPLACE(TRIM(lr.permit_key), ' ', ''))
-  WHERE pc.permit_key IS NULL
-  ORDER BY lr.valid_to DESC, lr.permit_key;
-`);
+      lo.permit_key AS permit_key,
+      lo.owner_name AS owner_name,
+      lo.owner_identity AS owner_identity,
+      lo.valid_to AS valid_to,
+      sg.grunnrente_pliktig AS grunnrente_pliktig
+    FROM last_owner lo
+    LEFT JOIN permit_current pc
+      ON UPPER(REPLACE(TRIM(pc.permit_key), ' ', '')) = UPPER(REPLACE(TRIM(lo.permit_key), ' ', ''))
+    LEFT JOIN snap_gr sg
+      ON UPPER(REPLACE(TRIM(sg.permit_key), ' ', '')) = UPPER(REPLACE(TRIM(lo.permit_key), ' ', ''))
+    WHERE pc.permit_key IS NULL
+    ORDER BY lo.valid_to DESC, lo.permit_key;
+  `);
 
+  // Filter: kun grunnrentepliktig
+  const rowsAfterGr = onlyGr
+    ? rows.filter(r => Number(r.grunnrente_pliktig) === 1)
+    : rows;
 
-  console.log("Historikk rows:", rows.length, rows.slice(0, 3));
-
+  // Søk
   const filtered = q
-    ? rows.filter(r =>
+    ? rowsAfterGr.filter(r =>
         String(r.permit_key ?? "").toLowerCase().includes(q) ||
         String(r.owner_name ?? "").toLowerCase().includes(q) ||
         String(r.owner_identity ?? "").toLowerCase().includes(q)
       )
-    : rows;
+    : rowsAfterGr;
 
-  const tbody = safeEl("historyTable").querySelector("tbody");
+  // Empty state (valgfritt, men anbefalt)
+  const empty = $("historyEmpty");
+  if (empty) empty.classList.toggle("hidden", filtered.length !== 0);
+
+  // Render tabell (knytt til view-history for å unngå feil hvis ID dupliseres)
+  const tbody = safeEl("view-history").querySelector("#historyTable tbody");
   tbody.innerHTML = "";
 
   for (const r of filtered) {
@@ -1234,6 +1261,7 @@ function renderHistory() {
     tbody.appendChild(tr);
   }
 }
+
 
 // --- routing ---
 function parseHash() {
@@ -1402,6 +1430,26 @@ function showError(err) {
   console.error(err);
   setStatus("Feil ved lasting", "bad");
   setMeta(String(err?.message || err));
+}
+// HISTORY: re-render ved søk/checkbox
+const historyOnly = $("historyOnlyGrunnrente");
+if (historyOnly) {
+  historyOnly.addEventListener("change", () => {
+    const r = parseHash();
+    if (r.view === "history") renderHistory();
+  });
+}
+
+const historySearch = $("historySearch");
+if (historySearch) {
+  let t = null;
+  historySearch.addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const r = parseHash();
+      if (r.view === "history") renderHistory();
+    }, 80);
+  });
 }
 
 // --- main ---
