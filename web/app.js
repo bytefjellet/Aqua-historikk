@@ -1157,7 +1157,6 @@ const grunnrenteCapacityTN = active.reduce(
 }
 
 // --- HISTORY view ---
-// --- HISTORY view ---
 function renderHistory() {
   setActiveTab("tab-history");
   showView("view-history");
@@ -1239,13 +1238,18 @@ function renderHistory() {
       )
     : rowsAfterGr;
 
-  // Empty state (valgfritt, men anbefalt)
+  // Empty state
   const empty = $("historyEmpty");
   if (empty) empty.classList.toggle("hidden", filtered.length !== 0);
 
-  // Render tabell (knytt til view-history for å unngå feil hvis ID dupliseres)
+  // Skjul/vis tabell
+  const tableWrap = $("historyTableWrap");
+  if (tableWrap) tableWrap.classList.toggle("hidden", filtered.length === 0);
+
   const tbody = safeEl("view-history").querySelector("#historyTable tbody");
   tbody.innerHTML = "";
+
+  if (filtered.length === 0) return;
 
   for (const r of filtered) {
     const ident = String(r.owner_identity ?? "").trim();
@@ -1253,14 +1257,24 @@ function renderHistory() {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><a class="link" href="#/permit/${encodeURIComponent(permitKeyNorm)}">${escapeHtml(r.permit_key)}</a></td>
+      <td>
+        <a class="link" href="#/permit/${encodeURIComponent(permitKeyNorm)}">
+          ${escapeHtml(r.permit_key)}
+        </a>
+      </td>
       <td>${escapeHtml(r.owner_name || "—")}</td>
-      <td>${ident ? `<a class="link" href="#/owner/${encodeURIComponent(ident)}">${escapeHtml(ident)}</a>` : "—"}</td>
+      <td>
+        ${
+          ident
+            ? `<a class="link" href="#/owner/${encodeURIComponent(ident)}">${escapeHtml(ident)}</a>`
+            : "—"
+        }
+      </td>
       <td>${escapeHtml(displayDate(r.valid_to))}</td>
     `;
     tbody.appendChild(tr);
   }
-}
+} 
 
 
 // --- routing ---
