@@ -367,12 +367,17 @@ function renderPermitCardUnified({
       ${artText ? `<div style="margin-top:8px"><span class="muted">Arter:</span> ${escapeHtml(artText)}</div>` : ""}
 
       <div style="margin-top:10px">
-        <div><span class="muted">Formål:</span> ${escapeHtml(valueOrDash(formal))}</div>
-        <div><span class="muted">Produksjonsstadium:</span> ${escapeHtml(valueOrDash(produksjonsstadium))}</div>
-        <div><span class="muted">Tillatelseskapasitet:</span> ${escapeHtml(valueOrDash(kapasitet))}</div>
-        <div><span class="muted">Produksjonsområde:</span> ${escapeHtml((String(prodOmr ?? "").trim() || "N/A"))}</div>
+      <div><span class="muted">Formål:</span> ${escapeHtml(valueOrDash(formal))}</div>
+      <div><span class="muted">Produksjonsstadium:</span> ${escapeHtml(valueOrDash(produksjonsstadium))}</div>
+      <div><span class="muted">Tillatelseskapasitet:</span> ${escapeHtml(valueOrDash(kapasitet))}</div>
+      <div><span class="muted">Produksjonsområde:</span> ${escapeHtml((String(prodOmr ?? "").trim() || "N/A"))}</div>
+
+      <div style="margin-top:8px">
+        <div><span class="muted">Vannmiljø:</span> ${vmPill || `<span class="muted">—</span>`}</div>
+        <div style="margin-top:6px"><span class="muted">Plassering:</span> ${lpPill || `<span class="muted">—</span>`}</div>
       </div>
     </div>
+
   `;
 }
 
@@ -689,6 +694,8 @@ function renderPermit(permitKey) {
       produksjonsstadium,
       kapasitet,
       prodOmr,
+      vannmiljo,
+      lokPlass,
       tidsbegrenset: tidsbegrensetCardDisplay,
     });
   } else {
@@ -933,6 +940,17 @@ function renderOwner(ownerIdentity) {
 
   for (const r of activeDisplay) {
     const rowDict = parseJsonSafe(r.row_json);
+    const vannmiljo = String(
+      rowDict["VANNMILJØ"] ??
+      rowDict["VANNMILJO"] ??
+      ""
+    ).trim();
+
+const lokPlass = String(
+  rowDict["LOK_PLASS"] ??
+  ""
+).trim();
+
 
     const prodOmr = String(rowDict["PROD_OMR"] ?? "").trim();
 
