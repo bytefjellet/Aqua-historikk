@@ -60,12 +60,13 @@ function setActiveTab(tabId) {
 }
 
 function showView(viewId) {
-  for (const id of ["view-now", "view-permit", "view-owner"]) {
+  for (const id of ["view-now", "view-permit", "view-owner", "view-history"]) {
     const el = $(id);
     if (!el) continue;
     el.style.display = (id === viewId) ? "block" : "none";
   }
 }
+
 
 function execAll(sql, params = []) {
   const stmt = db.prepare(sql);
@@ -1188,6 +1189,14 @@ function renderRoute() {
 // --- events ---
 function wireEvents() {
   window.addEventListener("hashchange", () => renderRoute());
+
+  // HISTORIKK-tab
+  const tabHistory = $("tab-history");
+  if (tabHistory) {
+    tabHistory.addEventListener("click", () => {
+      location.hash = "#/history";
+    });
+  }
 
   // NOW
   let nowTimer = null;
