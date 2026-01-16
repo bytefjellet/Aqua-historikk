@@ -1167,13 +1167,14 @@ function parseHash() {
     return { view: "owner", ident };
   }
 
-  return { view: "now" };
-
+  // 👇 NYTT: Historikk (støtter både /history og /historikk)
   if (parts[0] === "history" || parts[0] === "historikk") {
-  return { view: "history" };
+    return { view: "history" };
+  }
+
+  return { view: "now" };
 }
 
-}
 
 function renderRoute() {
   if (!db) return;
