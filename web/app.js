@@ -466,6 +466,7 @@ function renderPermitCardUnified({
 }
 
 // --- UNIFIED owner card renderer (med blå/gul grunnrente-pill) ---
+// --- UNIFIED owner card renderer (med blå/gul grunnrente-pill) ---
 function renderOwnerCardUnified({
   ownerName,
   ownerIdentity,
@@ -481,12 +482,13 @@ function renderOwnerCardUnified({
   const name = valueOrDash(ownerName);
   const ident = String(ownerIdentity ?? "").trim();
 
+  // Formatter TN-sum (midlertidig: vis også 0 for debugging)
   function fmtTN(n) {
-  const v = Number(n || 0);
-  return ` (${Math.round(v).toLocaleString("nb-NO")} TN)`;
-}
-  console.log("activeCapacityTN:", activeCapacityTN, "grunnrenteCapacityTN:", grunnrenteCapacityTN);
+    const v = Number(n || 0);
+    return ` (${Math.round(v).toLocaleString("nb-NO")} TN)`;
+  }
 
+  console.log("activeCapacityTN:", activeCapacityTN, "grunnrenteCapacityTN:", grunnrenteCapacityTN);
 
   const grunnCount = Number(grunnrenteActiveCount ?? 0);
   const grunnPillHtml = grunnCount > 0
@@ -506,13 +508,23 @@ function renderOwnerCardUnified({
       <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
 
       <div style="margin-top:10px">
-        <div><span class="muted">Aktive tillatelser:</span> ${escapeHtml(String(activeCount ?? 0))}</div>
-        <div><span class="muted">Grunnrentepliktige tillatelser:</span> ${escapeHtml(String(grunnrenteActiveCount ?? 0))}</div>
-        <div><span class="muted">Historiske tillatelser:</span> ${escapeHtml(String(formerPermitCount ?? 0))}</div>
+        <div>
+          <span class="muted">Aktive tillatelser:</span>
+          ${escapeHtml(String(activeCount ?? 0))}${fmtTN(activeCapacityTN)}
+        </div>
+        <div>
+          <span class="muted">Grunnrentepliktige tillatelser:</span>
+          ${escapeHtml(String(grunnrenteActiveCount ?? 0))}${fmtTN(grunnrenteCapacityTN)}
+        </div>
+        <div>
+          <span class="muted">Historiske tillatelser:</span>
+          ${escapeHtml(String(formerPermitCount ?? 0))}
+        </div>
       </div>
     </div>
   `;
 }
+
 
 // --- sort state (NOW) ---
 const sortState = { now: { key: "permit_key", dir: 1 } };
