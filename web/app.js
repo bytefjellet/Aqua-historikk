@@ -356,12 +356,6 @@ function renderPermitCardUnified({
         ${ident ? `<a class="link" href="#/owner/${encodeURIComponent(ident)}">${escapeHtml(ident)}</a>` : "—"}
       </div>
       
-      <div style="margin-top:10px">
-        <div><span class="muted">Vannmiljø:</span> ${vmPill || `<span class="muted">—</span>`}</div>
-        <div style="margin-top:6px"><span class="muted">Plassering:</span> ${lpPill || `<span class="muted">—</span>`}</div>
-      </div>
-
-
       ${tidsbegrenset ? `<div style="margin-top:8px"><span class="muted">Tidsbegrenset:</span> ${escapeHtml(tidsbegrenset)}</div>` : ""}
 
       ${artText ? `<div style="margin-top:8px"><span class="muted">Arter:</span> ${escapeHtml(artText)}</div>` : ""}
@@ -372,14 +366,18 @@ function renderPermitCardUnified({
       <div><span class="muted">Tillatelseskapasitet:</span> ${escapeHtml(valueOrDash(kapasitet))}</div>
       <div><span class="muted">Produksjonsområde:</span> ${escapeHtml((String(prodOmr ?? "").trim() || "N/A"))}</div>
 
-      <div style="margin-top:8px">
-        <div><span class="muted">Vannmiljø:</span> ${vmPill || `<span class="muted">—</span>`}</div>
-        <div style="margin-top:6px"><span class="muted">Plassering:</span> ${lpPill || `<span class="muted">—</span>`}</div>
+      ${(vmPill || lpPill) ? `
+        <div style="margin-top:8px">
+          ${vmPill ? `<div><span class="muted">Vannmiljø:</span> ${vmPill}</div>` : ""}
+          ${lpPill ? `<div style="margin-top:6px"><span class="muted">Plassering:</span> ${lpPill}</div>` : ""}
+        </div>
+      ` : ""}
+
       </div>
     </div>
-
   `;
-}
+    
+    }
 
 // --- UNIFIED owner card renderer (med blå/gul grunnrente-pill) ---
 function renderOwnerCardUnified({
