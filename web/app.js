@@ -486,7 +486,7 @@ function renderOwnerCardUnified({
   function fmtTN(n) {
   const v = Number(n || 0);
   if (v <= 0) return "";
-  return ` <span class="muted-small">(samlet kapasitet: ${Math.round(v).toLocaleString("nb-NO")} TN)</span>`;
+  return ` <span class="muted">(samlet kapasitet: ${Math.round(v).toLocaleString("nb-NO")} TN)</span>`;
 }
 
 
