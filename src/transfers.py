@@ -69,21 +69,29 @@ def upsert_transfers(conn, permit_key: str, transfers_json):
         name = t.get("officialName")
 
         conn.execute("""
-            INSERT INTO license_transfers(
-              permit_key, transfer_key, journal_date, updated_at,
-              current_owner_orgnr, current_owner_name, raw_json, fetched_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-        """, (
-            permit_key,
-            str(transfer_key) if transfer_key is not None else None,
-            str(journal_date) if journal_date is not None else None,
-            str(updated_at) if updated_at is not None else None,
-            str(orgnr) if orgnr is not None else None,
-            str(name) if name is not None else None,
-            raw,
-            fetched_at
-        ))
+        INSERT INTO license_transfers(
+        permit_key, transfer_key, journal_date, updated_at,
+        current_owner_orgnr, current_owner_name, raw_json, fetched_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(permit_key, transfer_key) DO UPDATE SET
+        journal_date=excluded.journal_date,
+        updated_at=excluded.updated_at,
+        current_owner_orgnr=excluded.current_owner_orgnr,
+        current_owner_name=excluded.current_owner_name,
+        raw_json=excluded.raw_json,
+        fetched_at=excluded.fetched_at;
+    """, (
+        permit_key,
+        str(transfer_key) if transfer_key is not None else None,
+        str(journal_date) if journal_date is not None else None,
+        str(updated_at) if updated_at is not None else None,
+        str(orgnr) if orgnr is not None else None,
+        str(name) if name is not None else None,
+        raw,
+        fetched_at
+    ))
+
 
     conn.commit()
 

@@ -43,6 +43,21 @@ def init_db(conn: sqlite3.Connection) -> None:
         );
         """
     )
+
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS transfers_fetch_state (
+        permit_key TEXT PRIMARY KEY,
+        last_fetched_at INTEGER,
+        last_ajour_date TEXT,
+        last_status TEXT,
+        last_error TEXT,
+        next_retry_at INTEGER
+    );
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tfs_next_retry ON transfers_fetch_state(next_retry_at);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tfs_last_fetched ON transfers_fetch_state(last_fetched_at);")  
+
+
     # ----------------------------
     # Opprinnelig innehaver
     # ----------------------------
@@ -222,6 +237,34 @@ def init_db(conn: sqlite3.Connection) -> None:
         """
     )
 
+    # ----------------------------
+    # license_transfers (API cache)
+    # ----------------------------
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS license_transfers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            permit_key TEXT NOT NULL,
+            transfer_key TEXT,
+            journal_date TEXT,
+            updated_at TEXT,
+            current_owner_orgnr TEXT,
+            current_owner_name TEXT,
+            raw_json TEXT NOT NULL,
+            fetched_at TEXT NOT NULL
+        );
+        """
+    )
+
+    # Hindrer duplikate transfers per tillatelse
+    conn.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_transfer_permit_key
+        ON license_transfers(permit_key, transfer_key);
+        """
+    )
+
+    
     # ----------------------------
     # Indekser
     # ----------------------------
