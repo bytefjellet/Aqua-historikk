@@ -55,7 +55,7 @@ function setMeta(text) {
 }
 
 function setActiveTab(tabId) {
-  for (const id of ["tab-now", "tab-permit", "tab-owner", "tab-history"]) {
+  for (const id of ["tab-now", "tab-permit", "tab-owner", "tab-history", "tab-areas"]) {
     const el = $(id);
     if (!el) continue;
     el.classList.toggle("active", id === tabId);
@@ -64,7 +64,7 @@ function setActiveTab(tabId) {
 
 
 function showView(viewId) {
-  for (const id of ["view-now", "view-permit", "view-owner", "view-history"]) {
+  for (const id of ["view-now", "view-permit", "view-owner", "view-history", "view-areas"]) {
     const el = $(id);
     if (!el) continue;
     el.style.display = (id === viewId) ? "block" : "none";
@@ -1515,6 +1515,7 @@ function renderHistory() {
 
 
 // --- routing ---
+// --- routing ---
 function parseHash() {
   const h = (location.hash || "#/now").replace(/^#\/?/, "");
   const parts = h.split("/").filter(Boolean);
@@ -1536,6 +1537,11 @@ function parseHash() {
     return { view: "history" };
   }
 
+  // 👇 NYTT: Produksjonsområder
+  if (parts[0] === "areas" || parts[0] === "produksjonsomrader" || parts[0] === "produksjonsområder") {
+    return { view: "areas" };
+  }
+
   return { view: "now" };
 }
 
@@ -1546,7 +1552,8 @@ function renderRoute() {
   if (r.view === "now") return renderNow();
   if (r.view === "permit") return renderPermit(r.key);
   if (r.view === "owner") return renderOwner(r.ident);
-  if (r.view === "history") return renderHistory(); // 👈 NY
+  if (r.view === "history") return renderHistory();
+  if (r.view === "areas") return renderAreas();
   renderNow();
 }
 

@@ -464,3 +464,60 @@ a:visited { color: inherit; }
 /* Skjul dot hvis den finnes fra før */
 .traffic-dot { display: none !important; }
 
+/* =========================
+   Produksjonsområder: expand-rader
+   ========================= */
+
+.expander-btn {
+  width: 34px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expander-btn:hover { border-color: var(--primary); }
+
+.chev {
+  display: inline-block;
+  transition: transform .15s ease;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+tr.is-open .chev { transform: rotate(90deg); }
+
+.details-row td {
+  background: #fbfcfe;
+  white-space: normal;
+}
+
+.details-box {
+  padding: 10px 12px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.details-item {
+  display: contents;
+}
+
+.details-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.details-empty {
+  color: var(--muted);
+  font-size: .9rem;
+}
