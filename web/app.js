@@ -440,6 +440,9 @@ function getOwnerStartDateForPermit(ownerOrgnr, permitKey) {
   const d = iso10(row?.d);
   return d || null;
 }
+function scrollToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
 
 // -------------------------------
 // NYTT: pill-regler (aktive)
@@ -1862,13 +1865,27 @@ function parseHash() {
 function renderRoute() {
   if (!db) return;
   const r = parseHash();
+
   if (r.view === "now") return renderNow();
-  if (r.view === "permit") return renderPermit(r.key);
-  if (r.view === "owner") return renderOwner(r.ident);
+
+  if (r.view === "permit") {
+    renderPermit(r.key);
+    scrollToTop();
+    return;
+  }
+
+  if (r.view === "owner") {
+    renderOwner(r.ident);
+    scrollToTop();
+    return;
+  }
+
   if (r.view === "history") return renderHistory();
   if (r.view === "areas") return renderAreas();
+
   renderNow();
 }
+
 
 
 // --- events ---
