@@ -473,11 +473,8 @@ function clearPermitView() {
   const card = $("permitCard");
   if (card) card.classList.add("hidden");
 
-  const tbody = safeEl("permitHistoryTable").querySelector("tbody");
-  tbody.innerHTML = "";
-
-  const reasonTh = $("permitReasonTh");
-  if (reasonTh) reasonTh.style.display = "";
+  const tbody = safeEl("permitOwnershipTimeline").querySelector("tbody");
+tbody.innerHTML = "";
 }
 
 function clearOwnerView() {
@@ -1094,43 +1091,35 @@ function renderPermit(permitKey) {
     });
   }
 
-  // Render history table
-  const tbody = safeEl("permitHistoryTable").querySelector("tbody");
+  // Render eierskapstimeline: nyest øverst, opprinnelig nederst
+  const tbody = safeEl("permitOwnershipTimeline").querySelector("tbody");
   tbody.innerHTML = "";
 
-  for (let i = 0; i < hist.length; i++) {
-    const r = hist[i];
-    const next = hist[i + 1] || null;
+  // hist er eldste → nyeste, vi vil vise motsatt
+  const timelineRows = [...hist].reverse();
 
-    const validTo = iso10(r.valid_to);
-    const tb = iso10(r.tidsbegrenset);
-
-    let reason = "";
-    if (!validTo) {
-      reason = "";
-    } else if (tb && tb === validTo) {
-      reason = `Utløpt (tidsbegrenset ${tb})`;
-    } else if (next) {
-      reason = "Overført / ny periode";
-    } else {
-      reason = "Avsluttet";
-    }
-    if (!reason) reason = "--";
-
+  for (const r of timelineRows) {
     const vf = displayDate(r.valid_from);
-    const vtLabel = (r.valid_to_label === "Aktiv") ? "Aktiv" : displayDate(r.valid_to_label);
+    const vt =
+      (r.valid_to_label === "Aktiv" || !iso10(r.valid_to))
+        ? "Aktiv"
+        : displayDate(r.valid_to_label);
+
     const ident = String(r.owner_identity ?? "").trim();
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${escapeHtml(vf)}</td>
-      <td>${escapeHtml(vtLabel)}</td>
-      ${showReasonColumn ? `<td class="muted">${escapeHtml(reason)}</td>` : ""}
-      <td>${escapeHtml(r.owner_name || "")}</td>
-      <td>${ident ? `<a class="link" href="#/owner/${encodeURIComponent(ident)}">${escapeHtml(ident)}</a>` : "—"}</td>
+      <td>${escapeHtml(vt)}</td>
+      <td>${escapeHtml(r.owner_name || "—")}</td>
+      <td>${ident
+        ? `<a class="link" href="#/owner/${encodeURIComponent(ident)}">${escapeHtml(ident)}</a>`
+        : "—"}
+      </td>
     `;
     tbody.appendChild(tr);
   }
+
 }
 
 // --- OWNER view ---

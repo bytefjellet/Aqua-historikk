@@ -226,7 +226,8 @@ h3 { margin: 0 0 8px; }
 }
 
 /* Skjul “Historikk”-overskrifter i høyre kolonne for å align'e tabell med kort */
-#view-permit .split-right > h3:first-child { display: none; }
+/*#view-permit .split-right > h3:first-child { display: none; }*/
+
 #view-owner .split-right > h3:first-child { display: none; }
 
 /* OWNER: kort over tabeller (ikke split) */
