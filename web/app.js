@@ -863,10 +863,12 @@ function renderOwnerCardUnified({
       : `<span class="pill pill--yellow">Ikke grunnrentepliktig</span>`;
 
   const years = (grunnYears || []).filter(Boolean);
-  const yearsHtml =
-    grunnCount > 0 && years.length > 0
-      ? `
-        <div class="year-chips" style="margin-top:6px">
+
+const yearsHtml =
+  grunnCount > 0 && years.length > 0
+    ? `
+      <div class="year-note">
+        <div class="year-chips">
           ${years.map(y => `<span class="year-chip year-chip--active">${escapeHtml(y)}</span>`).join("")}
         </div>
         <div class="muted" style="margin-top:6px">
@@ -875,8 +877,10 @@ function renderOwnerCardUnified({
         <div class="muted" style="margin-top:6px">
           Historikk før 2025 er beregnet ut fra opplysninger om overføringer hentet fra Akvakulturregisteret.
         </div>
-      `
-      : "";
+      </div>
+    `
+    : "";
+
 
   card.innerHTML = `
     <div style="font-size:1.1rem;font-weight:700">
