@@ -263,8 +263,13 @@ function iso10(s) {
   if (!s) return null;
   const t = String(s).trim();
   if (!t) return null;
-  return t.slice(0, 10);
+
+  // Kun datoer på format YYYY-MM-DD (evt med tid etterpå)
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+
+  return t; // <- ikke kutt vanlige tekster som "Opprinnelig"
 }
+
 
 function displayDate(s) {
   if (s == null) return "";
