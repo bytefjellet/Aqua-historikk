@@ -416,3 +416,36 @@ a:visited { color: inherit; }
   color: #2b5fd9;
   opacity: 0.65;
 }
+/* =========================
+   Trafikklys for produksjonsområde
+   (egen stil, ikke pill-gul)
+   ========================= */
+
+.traffic {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+/* selve "lyset" */
+.traffic-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.06);
+  border: 1px solid rgba(0,0,0,.10);
+}
+
+/* tekstfarge + dot-farge */
+.traffic--green { color: #0f6a2f; }
+.traffic--green .traffic-dot { background: #22c55e; }
+
+.traffic--yellow { color: #92400e; }          /* mørkere enn pill */
+.traffic--yellow .traffic-dot { background: #f59e0b; } /* amber */
+
+.traffic--red { color: #b91c1c; }
+.traffic--red .traffic-dot { background: #ef4444; }
+
+.traffic--unknown { color: var(--muted); }
+.traffic--unknown .traffic-dot { background: #9ca3af; }
