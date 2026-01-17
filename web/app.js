@@ -614,61 +614,6 @@ function listSnapshotDatesDesc() {
   return rows.map(r => iso10(r.snapshot_date)).filter(Boolean);
 }
 
-function buildGrunnrenteOwnerCountsForDate(snapshotDateIso10) {
-  const d = iso10(snapshotDateIso10);
-  const m = new Map();
-  if (!d) return m;
-
-  const rows = execAll(`
-    SELECT permit_key, row_json
-    FROM permit_snapshot
-    WHERE date(snapshot_date) = date(?)
-      AND grunnrente_pliktig = 1;
-  `, [d]);
-
-  for (const r of rows) {
-    const orgnr = extractOwnerOrgnrFromRowJson(r.row_json);
-    if (!orgnr) continue;
-
-    const name = extractOwnerNameFromRowJson(r.row_json);
-    const permit = String(r.permit_key ?? "").trim();
-
-    if (!m.has(orgnr)) m.set(orgnr, { orgnr, name: name || "", count: 0, permits: [] });
-    const obj = m.get(orgnr);
-    obj.count += 1;
-    if (permit) obj.permits.push(permit);
-    if (!obj.name && name) obj.name = name;
-  }
-
-  return m;
-}
-
-function computeGrunnrenteChanges(d1, d2) {
-  const before = d1 ? buildGrunnrenteOwnerCountsForDate(d1) : new Map();
-  const after  = buildGrunnrenteOwnerCountsForDate(d2);
-
-  const all = new Set([...before.keys(), ...after.keys()]);
-  const started = [];
-  const stopped = [];
-
-  for (const orgnr of all) {
-    const a = before.get(orgnr);
-    const b = after.get(orgnr);
-    const beforeCnt = a ? a.count : 0;
-    const afterCnt  = b ? b.count : 0;
-
-    if (beforeCnt === 0 && afterCnt > 0) {
-      started.push({ orgnr, name: b?.name || "", beforeCnt, afterCnt });
-    } else if (beforeCnt > 0 && afterCnt === 0) {
-      stopped.push({ orgnr, name: a?.name || "", beforeCnt, afterCnt });
-    }
-  }
-
-  started.sort((x, y) => (y.afterCnt - x.afterCnt) || x.orgnr.localeCompare(y.orgnr));
-  stopped.sort((x, y) => (y.beforeCnt - x.beforeCnt) || x.orgnr.localeCompare(y.orgnr));
-
-  return { started, stopped };
-}
 function renderChanges() {
   setActiveTab("tab-changes");
   showView("view-changes");
