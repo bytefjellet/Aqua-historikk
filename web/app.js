@@ -197,47 +197,14 @@ function getTransferEventsForPermit(permitKey) {
 }
 
 function getOriginalOwnerForPermit(permitKey) {
-  const t = "license_original_owner";
   const key = String(permitKey ?? "").trim().toUpperCase();
 
-  // permit-kolonne (du sa permit_key er PK, men vi gjør det robust)
-  const permitCol =
-    hasColumn(t, "permit_key") ? "permit_key" :
-    hasColumn(t, "license_key") ? "license_key" :
-    hasColumn(t, "tillatelse") ? "tillatelse" :
-    null;
-
-  if (!permitCol) {
-    console.warn("Fant ikke permit-kolonne i license_original_owner");
-    return null;
-  }
-
-  // navn-kolonne
-  const nameCol =
-    hasColumn(t, "owner_name") ? "owner_name" :
-    hasColumn(t, "original_owner_name") ? "original_owner_name" :
-    hasColumn(t, "innehaver_navn") ? "innehaver_navn" :
-    hasColumn(t, "name") ? "name" :
-    null;
-
-  // orgnr/ident-kolonne
-  const identCol =
-    hasColumn(t, "owner_orgnr") ? "owner_orgnr" :
-    hasColumn(t, "owner_identity") ? "owner_identity" :
-    hasColumn(t, "original_owner_orgnr") ? "original_owner_orgnr" :
-    hasColumn(t, "orgnr") ? "orgnr" :
-    hasColumn(t, "innehaver_orgnr") ? "innehaver_orgnr" :
-    null;
-
-  const selectCols = [
-    nameCol ? `${nameCol} AS name` : `NULL AS name`,
-    identCol ? `${identCol} AS ident` : `NULL AS ident`,
-  ].join(", ");
-
   const row = one(`
-    SELECT ${selectCols}
-    FROM ${t}
-    WHERE UPPER(TRIM(${permitCol})) = UPPER(TRIM(?))
+    SELECT
+      original_owner_name  AS name,
+      original_owner_orgnr AS ident
+    FROM license_original_owner
+    WHERE UPPER(TRIM(permit_key)) = UPPER(TRIM(?))
     LIMIT 1;
   `, [key]);
 
@@ -248,6 +215,7 @@ function getOriginalOwnerForPermit(permitKey) {
     ident: String(row.ident ?? "").trim()
   };
 }
+
 
 
 
