@@ -63,6 +63,7 @@ function setActiveTab(tabId) {
 }
 
 
+
 function showView(viewId) {
   for (const id of ["view-now", "view-permit", "view-owner", "view-history", "view-areas"]) {
     const el = $(id);
@@ -70,6 +71,7 @@ function showView(viewId) {
     el.style.display = (id === viewId) ? "block" : "none";
   }
 }
+
 
 
 function execAll(sql, params = []) {
@@ -1514,7 +1516,6 @@ function renderHistory() {
 } 
 
 
-// --- routing ---
 // --- routing ---
 function parseHash() {
   const h = (location.hash || "#/now").replace(/^#\/?/, "");
