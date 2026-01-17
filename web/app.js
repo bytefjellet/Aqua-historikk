@@ -4,7 +4,10 @@ let SQL = null;
 let db = null;
 let areaIndexBuilt = false;
 let areaOwnersIndex = new Map(); // code -> Map(key -> { owner_name, owner_identity, count })
-let areaPermitCount = new Map(); // code -> total permits
+let areaPermitCountGrs = new Map();      // code -> antall grunnrentepliktige
+let areaPermitCountNonGrs = new Map();   // code -> antall ikke-grunnrentepliktige
+let areaCapacityTN = new Map();          // code -> sum kapasitet (TN)
+
 
 const DB_URL = "data/aqua.sqlite";
 
@@ -223,22 +226,37 @@ function buildAreaIndexOnce() {
 
   areaOwnersIndex = new Map();
   areaPermitCount = new Map();
+  areaPermitCountGrs = new Map();
+  areaPermitCountNonGrs = new Map();
+  areaCapacityTN = new Map();
 
   const rows = execAll(`
-    SELECT owner_name, owner_identity, row_json
-    FROM permit_current;
-  `);
+  SELECT owner_name, owner_identity, row_json, grunnrente_pliktig
+  FROM permit_current;
+`);
 
   for (const r of rows) {
     const areaRaw = getProdOmrFromRowJson(r.row_json);
     const code = parseProdAreaCode(areaRaw);
     if (!code) continue;
 
+    const cap = extractCapacityTN(r.row_json); // TN eller 0
+    areaCapacityTN.set(code, (areaCapacityTN.get(code) || 0) + cap);
+
+
     const ident = String(r.owner_identity ?? "").trim().replace(/\s+/g, "");
     const name  = String(r.owner_name ?? "").trim();
 
     // total antall tillatelser i området
     areaPermitCount.set(code, (areaPermitCount.get(code) || 0) + 1);
+
+    // split: grunnrentepliktig vs ikke
+    const isGrs = Number(r.grunnrente_pliktig) === 1;
+    if (isGrs) {
+      areaPermitCountGrs.set(code, (areaPermitCountGrs.get(code) || 0) + 1);
+    } else {
+      areaPermitCountNonGrs.set(code, (areaPermitCountNonGrs.get(code) || 0) + 1);
+    }
 
     // per selskap i området
     if (!areaOwnersIndex.has(code)) areaOwnersIndex.set(code, new Map());
@@ -2240,9 +2258,25 @@ function renderAreas() {
   const tbody = safeEl("areasTable").querySelector("tbody");
   tbody.innerHTML = "";
 
+  // Summer nederst
+  let sumNon = 0;
+  let sumGrs = 0;
+  let sumCap = 0;
+
   for (let code = 1; code <= 13; code++) {
     const status = statusByCode.get(code) || null;
-    const total = Number(areaPermitCount.get(code) || 0);
+
+    const nonGrs = Number(areaPermitCountNonGrs.get(code) || 0);
+    const grs    = Number(areaPermitCountGrs.get(code) || 0);
+
+    const capTN  = Number(areaCapacityTN.get(code) || 0);
+    const capText = capTN > 0
+      ? `${Math.round(capTN).toLocaleString("nb-NO")} TN`
+      : "—";
+
+    sumNon += nonGrs;
+    sumGrs += grs;
+    sumCap += capTN;
 
     const tr = document.createElement("tr");
     tr.dataset.areaCode = String(code);
@@ -2256,8 +2290,14 @@ function renderAreas() {
         ${trafficHtml(code, status)}
         <span class="muted" style="margin-left:6px">${escapeHtml(PRODUCTION_AREA_NAMES[code] || "")}</span>
       </td>
-      <td>${escapeHtml(status === "GREEN" ? "Grønn" : status === "YELLOW" ? "Gul" : status === "RED" ? "Rød" : "Ukjent")}</td>
-      <td style="text-align:right">${escapeHtml(total.toLocaleString("nb-NO"))}</td>
+      <td>${escapeHtml(
+        status === "GREEN" ? "Grønn" :
+        status === "YELLOW" ? "Gul" :
+        status === "RED" ? "Rød" : "Ukjent"
+      )}</td>
+      <td style="text-align:right">${escapeHtml(nonGrs.toLocaleString("nb-NO"))}</td>
+      <td style="text-align:right">${escapeHtml(grs.toLocaleString("nb-NO"))}</td>
+      <td style="text-align:right">${escapeHtml(capText)}</td>
     `;
     tbody.appendChild(tr);
 
@@ -2265,7 +2305,7 @@ function renderAreas() {
     detailsTr.className = "details-row hidden";
     detailsTr.dataset.detailsFor = String(code);
     detailsTr.innerHTML = `
-      <td colspan="4">
+      <td colspan="6">
         <div class="details-box">
           <div class="muted" style="margin-bottom:8px">Klikk pilen for å se selskaper…</div>
         </div>
@@ -2273,6 +2313,22 @@ function renderAreas() {
     `;
     tbody.appendChild(detailsTr);
   }
+
+  // --- Sumrad nederst ---
+  const sumCapText = sumCap > 0
+    ? `${Math.round(sumCap).toLocaleString("nb-NO")} TN`
+    : "—";
+
+  const sumTr = document.createElement("tr");
+  sumTr.innerHTML = `
+    <td></td>
+    <td style="font-weight:700">Sum</td>
+    <td></td>
+    <td style="text-align:right;font-weight:700">${escapeHtml(sumNon.toLocaleString("nb-NO"))}</td>
+    <td style="text-align:right;font-weight:700">${escapeHtml(sumGrs.toLocaleString("nb-NO"))}</td>
+    <td style="text-align:right;font-weight:700">${escapeHtml(sumCapText)}</td>
+  `;
+  tbody.appendChild(sumTr);
 
   // Klikk-håndtering (delegert)
   tbody.onclick = (e) => {
@@ -2283,6 +2339,8 @@ function renderAreas() {
     if (!row) return;
 
     const code = Number(row.dataset.areaCode);
+    if (!code) return; // sumrad har ingen areaCode
+
     const detailsRow = tbody.querySelector(`tr.details-row[data-details-for="${code}"]`);
     if (!detailsRow) return;
 
