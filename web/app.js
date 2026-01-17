@@ -844,78 +844,70 @@ function renderOwnerCardUnified({
   grunnrenteCapacityTN = 0,
   grunnYears = [],
 }) {
-
   const card = safeEl("ownerCard");
   card.classList.remove("hidden");
 
   const name = valueOrDash(ownerName);
   const ident = String(ownerIdentity ?? "").trim();
 
-  // Formatter TN-sum (midlertidig: vis også 0 for debugging)
   function fmtTN(n) {
-  const v = Number(n || 0);
-  if (v <= 0) return "";
-  return ` <span class="muted-small">(samlet kapasitet: ${Math.round(v).toLocaleString("nb-NO")} TN)</span>`;
-}
-
-  console.log("activeCapacityTN:", activeCapacityTN, "grunnrenteCapacityTN:", grunnrenteCapacityTN);
+    const v = Number(n || 0);
+    if (v <= 0) return "";
+    return ` <span class="muted-small">(samlet kapasitet: ${Math.round(v).toLocaleString("nb-NO")} TN)</span>`;
+  }
 
   const grunnCount = Number(grunnrenteActiveCount ?? 0);
-  const grunnPillHtml = grunnCount > 0
-    ? `<span class="pill pill--blue">Grunnrentepliktig</span>`
-    : `<span class="pill pill--yellow">Ikke grunnrentepliktig</span>`;
+  const grunnPillHtml =
+    grunnCount > 0
+      ? `<span class="pill pill--blue">Grunnrentepliktig</span>`
+      : `<span class="pill pill--yellow">Ikke grunnrentepliktig</span>`;
+
+  const years = (grunnYears || []).filter(Boolean);
+  const yearsHtml =
+    grunnCount > 0 && years.length > 0
+      ? `
+        <div class="year-chips" style="margin-top:6px">
+          ${years.map(y => `<span class="year-chip year-chip--active">${escapeHtml(y)}</span>`).join("")}
+        </div>
+        <div class="muted-small" style="margin-top:6px">
+          År der innehaveren har vært eier av tillatelser som i dag er grunnrentepliktige.
+          Historikk før 2025 er beregnet ut fra transaksjonsdatoer.
+        </div>
+      `
+      : "";
 
   card.innerHTML = `
     <div style="font-size:1.1rem;font-weight:700">
       ${escapeHtml(name)}
     </div>
 
-    <div class="pills" style="margin-top:8px">
+    <div style="margin-top:10px">
+      <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
+    </div>
+
+    <div class="pills" style="margin-top:10px">
       ${grunnPillHtml}
     </div>
 
-    <div style="margin-top:10px">
-      <div><span class="muted">Org.nr.:</span> ${escapeHtml(ident || "—")}</div>
-      ${(() => {
-        const years = (grunnYears || []).filter(Boolean);
+    ${yearsHtml}
 
-          const chips = years.length
-            ? `<div class="year-chips">
-                ${years.map(y => `<span class="year-chip year-chip--active">${escapeHtml(y)}</span>`).join("")}
-              </div>`
-            : `<div class="muted" style="margin-top:6px">—</div>`;
-
-          return `
-            <div style="margin-top:10px">
-              <div><span class="muted">Grunnrentepliktig i år:</span></div>
-              ${chips}
-              <div class="muted-small" style="margin-top:6px">
-                År der innehaveren har vært eier av tillatelser som i dag er grunnrentepliktige.
-                Historikk før 2025 er beregnet ut fra transaksjonsdatoer.
-              </div>
-            </div>
-          `;
-        })()} 
-
-
-
-      <div style="margin-top:10px">
-        <div>
-          <span class="muted">Aktive tillatelser:</span>
-          ${escapeHtml(String(activeCount ?? 0))}${fmtTN(activeCapacityTN)}
-        </div>
-        <div>
-          <span class="muted">Grunnrentepliktige tillatelser:</span>
-          ${escapeHtml(String(grunnrenteActiveCount ?? 0))}${fmtTN(grunnrenteCapacityTN)}
-        </div>
-        <div>
-          <span class="muted">Historiske tillatelser:</span>
-          ${escapeHtml(String(formerPermitCount ?? 0))}
-        </div>
+    <div style="margin-top:12px">
+      <div>
+        <span class="muted">Aktive tillatelser:</span>
+        ${escapeHtml(String(activeCount ?? 0))}${fmtTN(activeCapacityTN)}
+      </div>
+      <div>
+        <span class="muted">Grunnrentepliktige tillatelser:</span>
+        ${escapeHtml(String(grunnrenteActiveCount ?? 0))}${fmtTN(grunnrenteCapacityTN)}
+      </div>
+      <div>
+        <span class="muted">Historiske tillatelser:</span>
+        ${escapeHtml(String(formerPermitCount ?? 0))}
       </div>
     </div>
   `;
 }
+
 
 
 // --- sort state (NOW) ---
