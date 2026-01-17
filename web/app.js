@@ -11,6 +11,9 @@ const schema = {
   permit_snapshot_has_art: false,
   permit_snapshot_has_row_json: false,
   permit_snapshot_has_grunnrente: false,
+  production_area_has_name: false,
+  production_area_has_status: false,
+  production_area_has_date: false,
 };
 
 // Owner filter state
@@ -82,6 +85,93 @@ function one(sql, params = []) {
   const rows = execAll(sql, params);
   return rows.length ? rows[0] : null;
 }
+
+function normTrafficStatus(s) {
+  const t = String(s ?? "").trim().toUpperCase();
+  if (!t) return null;
+  if (t.startsWith("GRØNN") || t.startsWith("GRONN") || t === "GREEN") return "GREEN";
+  if (t.startsWith("GUL") || t === "YELLOW") return "YELLOW";
+  if (t.startsWith("RØD") || t.startsWith("ROD") || t === "RED") return "RED";
+  return null;
+}
+
+function trafficClass(statusNorm) {
+  if (statusNorm === "GREEN") return "traffic--green";
+  if (statusNorm === "YELLOW") return "traffic--yellow";
+  if (statusNorm === "RED") return "traffic--red";
+  return "traffic--unknown";
+}
+
+// Henter siste status + navn for et produksjonsområde (1-13)
+function getProductionAreaInfo(prodOmr) {
+  const area = String(prodOmr ?? "").trim();
+  if (!area) return { area: "", name: "", status: null };
+
+  // Finn kolonnenavn som finnes
+  const nameCol =
+    hasColumn("production_area_status", "production_area_name") ? "production_area_name" :
+    hasColumn("production_area_status", "area_name") ? "area_name" :
+    hasColumn("production_area_status", "name") ? "name" :
+    null;
+
+  const statusCol =
+    hasColumn("production_area_status", "status") ? "status" :
+    hasColumn("production_area_status", "color") ? "color" :
+    null;
+
+  const dateCol =
+    hasColumn("production_area_status", "status_date") ? "status_date" :
+    hasColumn("production_area_status", "date") ? "date" :
+    hasColumn("production_area_status", "snapshot_date") ? "snapshot_date" :
+    hasColumn("production_area_status", "as_of") ? "as_of" :
+    null;
+
+  // Finn områdekolonne (vanlige varianter)
+  const areaCol =
+    hasColumn("production_area_status", "production_area") ? "production_area" :
+    hasColumn("production_area_status", "prod_omr") ? "prod_omr" :
+    hasColumn("production_area_status", "area") ? "area" :
+    null;
+
+  if (!areaCol) return { area, name: "", status: null };
+
+  const selectCols = [
+    nameCol ? `${nameCol} AS area_name` : `NULL AS area_name`,
+    statusCol ? `${statusCol} AS status` : `NULL AS status`,
+    dateCol ? `${dateCol} AS status_date` : `NULL AS status_date`,
+  ].join(", ");
+
+  const orderBy = dateCol ? `ORDER BY date(${dateCol}) DESC` : "";
+  const row = one(`
+    SELECT ${selectCols}
+    FROM production_area_status
+    WHERE TRIM(${areaCol}) = TRIM(?)
+    ${orderBy}
+    LIMIT 1;
+  `, [area]);
+
+  const name = String(row?.area_name ?? "").trim();
+  const statusNorm = normTrafficStatus(row?.status);
+
+  return { area, name, status: statusNorm };
+}
+
+function trafficHtml(area, statusNorm) {
+  const cls = trafficClass(statusNorm);
+  const label =
+    statusNorm === "GREEN" ? "Grønn" :
+    statusNorm === "YELLOW" ? "Gul" :
+    statusNorm === "RED" ? "Rød" :
+    "Ukjent";
+
+  return `
+    <span class="traffic ${cls}" title="Status: ${escapeHtml(label)}">
+      <span class="traffic-dot" aria-hidden="true"></span>
+      <span>${escapeHtml(area)}</span>
+    </span>
+  `;
+}
+
 
 function hasColumn(table, col) {
   const rows = execAll(`PRAGMA table_info(${table});`);
@@ -209,6 +299,7 @@ function isBlueFormal(formalValue) {
   return normUpper(formalValue) === "KOMMERSIELL";
 }
 
+
 // Produksjonsstadium: blå hvis i whitelist
 const BLUE_STAGE = new Set([
   "MATFISK",
@@ -229,6 +320,76 @@ function isBlueProduksjonsstadium(stageValue) {
 function pillSpanByRule(text, isBlue) {
   if (!String(text ?? "").trim()) return "";
   return `<span class="pill ${isBlue ? "pill--blue" : "pill--yellow"}">${escapeHtml(String(text).trim())}</span>`;
+}
+// -------------------------------
+// PRODUKSJONSOMRÅDER – trafikklys
+// -------------------------------
+
+// Faste navn på produksjonsområder (1–13)
+const PRODUCTION_AREA_NAMES = {
+  1: "Svenskegrensen – Jæren",
+  2: "Ryfylke",
+  3: "Karmøy – Sotra",
+  4: "Nordhordland – Stadt",
+  5: "Stadt – Hustadvika",
+  6: "Nordmøre – Sør-Trøndelag",
+  7: "Nord-Trøndelag med Bindal",
+  8: "Helgeland – Bodø",
+  9: "Vestfjorden og Vesterålen",
+  10: "Andøya – Senja",
+  11: "Kvaløya – Loppa",
+  12: "Vest-Finnmark",
+  13: "Øst-Finnmark"
+};
+
+function normTrafficStatus(s) {
+  const t = String(s ?? "").trim().toUpperCase();
+  if (t === "GRØNN") return "GREEN";
+  if (t === "GUL")   return "YELLOW";
+  if (t === "RØD")   return "RED";
+  return null;
+}
+
+function getProductionAreaInfo(prodAreaCode) {
+  const code = Number(prodAreaCode);
+  if (!Number.isFinite(code)) {
+    return { code: prodAreaCode, name: "", status: null };
+  }
+
+  const row = one(`
+    SELECT prod_area_status
+    FROM production_area_status
+    WHERE prod_area_code = ?
+    ORDER BY date(snapshot_date) DESC
+    LIMIT 1;
+  `, [code]);
+
+  return {
+    code,
+    name: PRODUCTION_AREA_NAMES[code] || "",
+    status: normTrafficStatus(row?.prod_area_status)
+  };
+}
+
+function trafficHtml(code, statusNorm) {
+  const cls =
+    statusNorm === "GREEN"  ? "traffic--green"  :
+    statusNorm === "YELLOW" ? "traffic--yellow" :
+    statusNorm === "RED"    ? "traffic--red"    :
+                              "traffic--unknown";
+
+  const label =
+    statusNorm === "GREEN"  ? "Grønn"  :
+    statusNorm === "YELLOW" ? "Gul"    :
+    statusNorm === "RED"    ? "Rød"    :
+                              "Ukjent";
+
+  return `
+    <span class="traffic ${cls}" title="Status: ${label}">
+      <span class="traffic-dot" aria-hidden="true"></span>
+      <span>${escapeHtml(code)}</span>
+    </span>
+  `;
 }
 
 // --- PERMIT empty state helpers ---
@@ -454,7 +615,27 @@ function renderPermitCardUnified({
         </div>
 
         <div style="margin-top:6px"><span class="muted">Tillatelseskapasitet:</span> ${escapeHtml(valueOrDash(kapasitet))}</div>
-        <div style="margin-top:6px"><span class="muted">Produksjonsområde:</span> ${escapeHtml((String(prodOmr ?? "").trim() || "N/A"))}</div>
+      
+        ${(() => {
+          const areaRaw = String(prodOmr ?? "").trim();
+          if (!areaRaw || areaRaw === "N/A") {
+            return `<div style="margin-top:6px"><span class="muted">Produksjonsområde:</span> ${escapeHtml(areaRaw || "N/A")}</div>`;
+          }
+
+          const info = getProductionAreaInfo(areaRaw);
+          const areaLine = trafficHtml(info.area, info.status);
+          const nameLine = info.name
+            ? `<div class="muted" style="margin-top:4px">${escapeHtml(info.name)}</div>`
+            : "";
+
+          return `
+            <div style="margin-top:6px">
+              <span class="muted">Produksjonsområde:</span> ${areaLine}
+              ${nameLine}
+            </div>
+          `;
+        })()}
+
 
         ${(vmPill || lpPill) ? `
           <div style="margin-top:8px">
@@ -467,7 +648,6 @@ function renderPermitCardUnified({
   `;
 }
 
-// --- UNIFIED owner card renderer (med blå/gul grunnrente-pill) ---
 // --- UNIFIED owner card renderer (med blå/gul grunnrente-pill) ---
 function renderOwnerCardUnified({
   ownerName,
@@ -557,6 +737,23 @@ async function loadDatabase() {
   schema.permit_snapshot_has_art = hasColumn("permit_snapshot", "art");
   schema.permit_snapshot_has_row_json = hasColumn("permit_snapshot", "row_json");
   schema.permit_snapshot_has_grunnrente = hasColumn("permit_snapshot", "grunnrente_pliktig");
+
+    // production_area_status kolonner (robusthet)
+  schema.production_area_has_name =
+    hasColumn("production_area_status", "production_area_name") ||
+    hasColumn("production_area_status", "area_name") ||
+    hasColumn("production_area_status", "name");
+
+  schema.production_area_has_status =
+    hasColumn("production_area_status", "status") ||
+    hasColumn("production_area_status", "color");
+
+  schema.production_area_has_date =
+    hasColumn("production_area_status", "status_date") ||
+    hasColumn("production_area_status", "date") ||
+    hasColumn("production_area_status", "snapshot_date") ||
+    hasColumn("production_area_status", "as_of");
+
 
   // Bygg liste over alle formål i databasen (fra permit_current.row_json)
   try {
