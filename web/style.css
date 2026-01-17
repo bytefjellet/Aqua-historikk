@@ -441,11 +441,22 @@ a:visited { color: inherit; }
 .traffic--green { color: #0f6a2f; }
 .traffic--green .traffic-dot { background: #22c55e; }
 
-.traffic--yellow { color: #92400e; }          /* mørkere enn pill */
-.traffic--yellow .traffic-dot { background: #f59e0b; } /* amber */
+/* Gul: mer "amber/gull", mindre rødlig */
+.traffic--yellow { color: #a16207; }                 /* amber-700-ish */
+.traffic--yellow .traffic-dot { background: #f59e0b; } /* amber-500 */
 
 .traffic--red { color: #b91c1c; }
 .traffic--red .traffic-dot { background: #ef4444; }
 
 .traffic--unknown { color: var(--muted); }
 .traffic--unknown .traffic-dot { background: #9ca3af; }
+
+/* Litt "badge" rundt selve tallet for bedre lesbarhet */
+.traffic-num {
+  display: inline-block;
+  padding: 0 8px;
+  line-height: 20px;
+  border-radius: 999px;
+  background: #f3f4f6;           /* lys grå */
+  border: 1px solid rgba(0,0,0,.06);
+}

@@ -401,7 +401,8 @@ function trafficHtml(code, statusNorm) {
   return `
     <span class="traffic ${cls}" title="Status: ${label}">
       <span class="traffic-dot" aria-hidden="true"></span>
-      <span>${escapeHtml(code)}</span>
+      <span class="traffic-num">${escapeHtml(code)}</span>
+
     </span>
   `;
 }
