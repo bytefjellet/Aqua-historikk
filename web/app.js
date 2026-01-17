@@ -171,6 +171,19 @@ function trafficHtml(area, statusNorm) {
     </span>
   `;
 }
+function parseProdAreaCode(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+
+  // finn første tallsekvens i strengen (f.eks "7", "PO7", "7 - Helgeland", osv.)
+  const m = s.match(/\d+/);
+  if (!m) return null;
+
+  const n = Number(m[0]);
+  if (!Number.isFinite(n)) return null;
+  if (n < 1 || n > 13) return null;
+  return n;
+}
 
 
 function hasColumn(table, col) {
@@ -350,10 +363,10 @@ function normTrafficStatus(s) {
   return null;
 }
 
-function getProductionAreaInfo(prodAreaCode) {
-  const code = Number(prodAreaCode);
-  if (!Number.isFinite(code)) {
-    return { code: prodAreaCode, name: "", status: null };
+function getProductionAreaInfo(prodAreaRaw) {
+  const code = parseProdAreaCode(prodAreaRaw);
+  if (!code) {
+    return { code: String(prodAreaRaw ?? "").trim(), name: "", status: null };
   }
 
   const row = one(`
@@ -365,11 +378,12 @@ function getProductionAreaInfo(prodAreaCode) {
   `, [code]);
 
   return {
-    code,
+    code, // <- alltid 1–13 her
     name: PRODUCTION_AREA_NAMES[code] || "",
     status: normTrafficStatus(row?.prod_area_status)
   };
 }
+
 
 function trafficHtml(code, statusNorm) {
   const cls =
@@ -619,23 +633,29 @@ function renderPermitCardUnified({
         ${(() => {
           const areaRaw = String(prodOmr ?? "").trim();
           if (!areaRaw || areaRaw === "N/A") {
-            return `<div style="margin-top:6px"><span class="muted">Produksjonsområde:</span> ${escapeHtml(areaRaw || "N/A")}</div>`;
+            return `
+              <div style="margin-top:6px">
+                <span class="muted">Produksjonsområde:</span> ${escapeHtml(areaRaw || "N/A")}
+              </div>
+            `;
           }
 
           const info = getProductionAreaInfo(areaRaw);
-          const areaLine = trafficHtml(info.area, info.status);
+
+          const areaLine = trafficHtml(info.code, info.status);
           const nameLine = info.name
             ? `<div class="muted" style="margin-top:4px">${escapeHtml(info.name)}</div>`
             : "";
 
           return `
             <div style="margin-top:6px">
-              <span class="muted">Produksjonsområde:</span> ${areaLine}
+              <div>
+                <span class="muted">Produksjonsområde:</span> ${areaLine}
+              </div>
               ${nameLine}
             </div>
           `;
         })()}
-
 
         ${(vmPill || lpPill) ? `
           <div style="margin-top:8px">
