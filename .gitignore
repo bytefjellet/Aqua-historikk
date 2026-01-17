@@ -1,34 +1,55 @@
+# -------------------------
 # Python
+# -------------------------
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 .pytest_cache/
 .mypy_cache/
 .venv/
 venv/
 
-# Mac / editor
+# -------------------------
+# OS / editor
+# -------------------------
 .DS_Store
 .vscode/
 
-# SQLite
-db/*.sqlite
-db/*.sqlite-wal
-db/*.sqlite-shm
-db/*.db
-db/*.backup.sqlite
+# -------------------------
+# Logs / output
+# -------------------------
+logs/
+*.log
 
-# Data snapshots (ofte store)
+# -------------------------
+# Snapshots (rådata - ofte store)
+# -------------------------
 data/snapshots/*.csv
-
-# Hvis du vil beholde en liten CI-fixture i repo:
 !data/snapshots/.gitkeep
 !data/snapshots/fixtures/**
 
-# Logs
-logs/
+# -------------------------
+# SQLite (midlertidige filer - alltid ignorér)
+# -------------------------
+**/*.sqlite-wal
+**/*.sqlite-shm
 
-# macOS
-.DS_Store
+# -------------------------
+# SQLite (lokale DB-er - ignorér)
+# -------------------------
+db/*.sqlite
+db/*.db
+db/*.backup.sqlite
 
+data/*.sqlite
+data/*.db
+data/*.backup.sqlite
+
+# Test/arbeids-DB-er under web/data
+web/data/*test*.sqlite
+web/data/*test*.db
+web/data/*.backup.sqlite
+
+# -------------------------
+# GitHub Pages: behold den publiserte DB-en
+# -------------------------
+!web/data/aqua.sqlite
