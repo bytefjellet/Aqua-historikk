@@ -264,6 +264,19 @@ function getProdOmrFromRowJson(rowJsonText) {
   return d["PROD_OMR"];
 }
 
+function parseProdAreaCode(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+
+  // finn første tallsekvens ("7", "PO7", "7 - ...", osv.)
+  const m = s.match(/\d+/);
+  if (!m) return null;
+
+  const n = Number(m[0]);
+  if (!Number.isFinite(n) || n < 1 || n > 13) return null;
+  return n;
+}
+
 function buildAreaIndexOnce() {
   if (areaIndexBuilt) return;
 
