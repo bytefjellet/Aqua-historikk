@@ -874,13 +874,15 @@ const yearsHtml =
         <div class="year-chips">
           ${years.map(y => `<span class="year-chip year-chip--active">${escapeHtml(y)}</span>`).join("")}
         </div>
-        <div class="muted" style="margin-top:6px">
-          Angir år der innehaveren har vært eier av tillatelser som i dag er grunnrentepliktige.
+        <div class="year-note-text">
+          <div>
+            Angir år der innehaveren har vært eier av tillatelser som i dag er grunnrentepliktige.
+          </div>
+          <div>
+            Historikk før 2025 er beregnet ut fra opplysninger om overføringer hentet fra Akvakulturregisteret.
+          </div>
         </div>
-        <div class="muted" style="margin-top:6px">
-          Historikk før 2025 er beregnet ut fra opplysninger om overføringer hentet fra Akvakulturregisteret.
-        </div>
-      </div>
+
     `
     : "";
 

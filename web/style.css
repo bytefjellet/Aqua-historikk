@@ -552,3 +552,17 @@ tr.is-open .chev { transform: rotate(90deg); }
   padding-left: 12px;
   border-left: 3px solid #e5e7eb; /* lys grå */
 }
+.year-note-text {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;     /* litt mindre enn vanlig tekst */
+}
+
+.year-note-text > div {
+  line-height: 1.25;     /* strammere linjeavstand */
+  margin-top: 2px;       /* mindre avstand mellom linjene */
+}
+
+.year-note-text > div:first-child {
+  margin-top: 0;
+}
