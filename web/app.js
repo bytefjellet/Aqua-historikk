@@ -6,7 +6,7 @@ let areaIndexBuilt = false;
 let areaOwnersIndex = new Map(); // code -> Map(key -> { owner_name, owner_identity, count })
 let areaPermitCount = new Map(); // code -> total permits
 
-const DB_URL = "data/aqua.sqlite";
+const DB_URL = "data/aqua_test.sqlite";
 
 // Schema flags (settes etter DB lastes)
 const schema = {
