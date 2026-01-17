@@ -354,38 +354,91 @@ function isOwnerAtDate(ownerOrgnr, permitKey, isoDate) {
 
   return !!row;
 }
-function getGrunnrenteYearsForOwner(ownerOrgnr, fromYear = 2023) {
-  const years = [];
-  const nowYear = new Date().getFullYear();
 
-  // hent alle snapshots som er grunnrentepliktige (fra 2023 og frem)
-  const snaps = execAll(`
-    SELECT permit_key, snapshot_date
-    FROM permit_snapshot
-    WHERE grunnrente_pliktig = 1
-      AND date(snapshot_date) >= date(?)
-    ORDER BY snapshot_date;
-  `, [`${fromYear}-01-01`]);
+function getOwnerStartDateForPermit(ownerOrgnr, permitKey) {
+  const owner = String(ownerOrgnr ?? "").trim();
+  const key = String(permitKey ?? "").trim().toUpperCase();
+  if (!owner || !key) return null;
 
-  // Gruppér snapshots per år, men vi bryter tidlig når vi finner en match for året
-  const found = new Set();
-
-  for (const s of snaps) {
-    const d = iso10(s.snapshot_date);
-    if (!d) continue;
-    const y = Number(d.slice(0, 4));
-    if (y < fromYear || y > nowYear) continue;
-    if (found.has(y)) continue;
-
-    const key = String(s.permit_key ?? "").trim();
-    if (!key) continue;
-
-    if (isOwnerAtDate(ownerOrgnr, key, d)) {
-      found.add(y);
-    }
+  // Opprinnelig innehaver
+  const orig = getOriginalOwnerForPermit(key);
+  if (orig && String(orig.ident || "").trim() === owner) {
+    return "0000-01-01";
   }
 
-  return Array.from(found).sort((a, b) => a - b);
+  // Første gang denne eieren dukker opp som "current_owner" i transfers
+  const row = one(`
+    SELECT journal_date AS d
+    FROM license_transfers
+    WHERE UPPER(TRIM(permit_key)) = UPPER(TRIM(?))
+      AND TRIM(current_owner_orgnr) = TRIM(?)
+    ORDER BY date(journal_date) ASC, id ASC
+    LIMIT 1;
+  `, [key, owner]);
+
+  const d = iso10(row?.d);
+  return d || null;
+}
+
+function getGrunnrenteYearsForOwner(ownerOrgnr, fromYear = 2023) {
+  const owner = String(ownerOrgnr ?? "").trim();
+  if (!owner) return [];
+
+  const nowYear = new Date().getFullYear();
+
+  // Tillatelser som er grunnrentepliktige nå (definisjonen din)
+  const permits = execAll(`
+    SELECT permit_key
+    FROM permit_current
+    WHERE grunnrente_pliktig = 1;
+  `);
+
+  let earliestYear = null;
+
+  for (const p of permits) {
+    const key = String(p.permit_key ?? "").trim();
+    if (!key) continue;
+
+    const start = getOwnerStartDateForPermit(owner, key);
+    if (!start) continue;
+
+    const startYear = Number(start.slice(0, 4)) || fromYear;
+    const y = Math.max(fromYear, startYear);
+
+    if (earliestYear == null || y < earliestYear) earliestYear = y;
+  }
+
+  if (earliestYear == null) return [];
+
+  const years = [];
+  for (let y = earliestYear; y <= nowYear; y++) years.push(y);
+  return years;
+}
+
+
+function getOwnerStartDateForPermit(ownerOrgnr, permitKey) {
+  const owner = String(ownerOrgnr ?? "").trim();
+  const key = String(permitKey ?? "").trim().toUpperCase();
+  if (!owner || !key) return null;
+
+  // 1) Hvis eier er opprinnelig innehaver -> start "ukjent tidlig"
+  const orig = getOriginalOwnerForPermit(key);
+  if (orig && String(orig.ident || "").trim() === owner) {
+    return "0000-01-01";
+  }
+
+  // 2) Finn første transfer der current_owner_orgnr == owner
+  const row = one(`
+    SELECT journal_date AS d
+    FROM license_transfers
+    WHERE UPPER(TRIM(permit_key)) = UPPER(TRIM(?))
+      AND TRIM(current_owner_orgnr) = TRIM(?)
+    ORDER BY date(journal_date) ASC, id ASC
+    LIMIT 1;
+  `, [key, owner]);
+
+  const d = iso10(row?.d);
+  return d || null;
 }
 
 // -------------------------------
