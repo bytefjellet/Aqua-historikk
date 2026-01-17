@@ -2,6 +2,9 @@
 
 let SQL = null;
 let db = null;
+let areaIndexBuilt = false;
+let areaOwnersIndex = new Map(); // code -> Map(key -> { owner_name, owner_identity, count })
+let areaPermitCount = new Map(); // code -> total permits
 
 const DB_URL = "data/aqua.sqlite";
 
@@ -105,78 +108,28 @@ function trafficClass(statusNorm) {
 }
 
 // Henter siste status + navn for et produksjonsområde (1-13)
-function getProductionAreaInfo(prodOmr) {
-  const area = String(prodOmr ?? "").trim();
-  if (!area) return { area: "", name: "", status: null };
+// Tilpasset ditt schema: production_area_status(snapshot_date, prod_area_code, prod_area_status, ...)
+function getProductionAreaInfo(prodAreaRaw) {
+  const code = parseProdAreaCode(prodAreaRaw);
+  if (!code) {
+    return { code: String(prodAreaRaw ?? "").trim(), name: "", status: null };
+  }
 
-  // Finn kolonnenavn som finnes
-  const nameCol =
-    hasColumn("production_area_status", "production_area_name") ? "production_area_name" :
-    hasColumn("production_area_status", "area_name") ? "area_name" :
-    hasColumn("production_area_status", "name") ? "name" :
-    null;
-
-  const statusCol =
-    hasColumn("production_area_status", "status") ? "status" :
-    hasColumn("production_area_status", "color") ? "color" :
-    null;
-
-  const dateCol =
-    hasColumn("production_area_status", "status_date") ? "status_date" :
-    hasColumn("production_area_status", "date") ? "date" :
-    hasColumn("production_area_status", "snapshot_date") ? "snapshot_date" :
-    hasColumn("production_area_status", "as_of") ? "as_of" :
-    null;
-
-  // Finn områdekolonne (vanlige varianter)
-  const areaCol =
-    hasColumn("production_area_status", "production_area") ? "production_area" :
-    hasColumn("production_area_status", "prod_omr") ? "prod_omr" :
-    hasColumn("production_area_status", "area") ? "area" :
-    null;
-
-  if (!areaCol) return { area, name: "", status: null };
-
-  const selectCols = [
-    nameCol ? `${nameCol} AS area_name` : `NULL AS area_name`,
-    statusCol ? `${statusCol} AS status` : `NULL AS status`,
-    dateCol ? `${dateCol} AS status_date` : `NULL AS status_date`,
-  ].join(", ");
-
-  const orderBy = dateCol ? `ORDER BY date(${dateCol}) DESC` : "";
   const row = one(`
-    SELECT ${selectCols}
+    SELECT prod_area_status
     FROM production_area_status
-    WHERE TRIM(${areaCol}) = TRIM(?)
-    ${orderBy}
+    WHERE prod_area_code = ?
+    ORDER BY date(snapshot_date) DESC
     LIMIT 1;
-  `, [area]);
+  `, [code]);
 
-  const name = String(row?.area_name ?? "").trim();
-  const statusNorm = normTrafficStatus(row?.status);
-
-  return { area, name, status: statusNorm };
+  return {
+    code,
+    name: PRODUCTION_AREA_NAMES[code] || "",
+    status: normTrafficStatus(row?.prod_area_status)
+  };
 }
 
-function trafficHtml(code, statusNorm) {
-  const cls =
-    statusNorm === "GREEN"  ? "traffic--green"  :
-    statusNorm === "YELLOW" ? "traffic--yellow" :
-    statusNorm === "RED"    ? "traffic--red"    :
-                              "traffic--unknown";
-
-  const label =
-    statusNorm === "GREEN"  ? "Grønn"  :
-    statusNorm === "YELLOW" ? "Gul"    :
-    statusNorm === "RED"    ? "Rød"    :
-                              "Ukjent";
-
-  return `
-    <span class="traffic ${cls}" title="Status: ${label}">
-      <span class="traffic-num">${escapeHtml(code)}</span>
-    </span>
-  `;
-}
 
 function parseProdAreaCode(raw) {
   const s = String(raw ?? "").trim();
@@ -1514,6 +1467,125 @@ function renderHistory() {
     tbody.appendChild(tr);
   }
 } 
+
+function renderAreas() {
+  setActiveTab("tab-areas");
+  showView("view-areas");
+
+  // Bygg indeks over selskaper per område (én gang)
+  buildAreaIndexOnce();
+
+  // Hent siste status per område
+  const statusRows = execAll(`
+    WITH latest AS (
+      SELECT prod_area_code, MAX(snapshot_date) AS max_date
+      FROM production_area_status
+      GROUP BY prod_area_code
+    )
+    SELECT
+      pas.prod_area_code AS prod_area_code,
+      pas.prod_area_status AS prod_area_status,
+      pas.snapshot_date AS snapshot_date
+    FROM production_area_status pas
+    JOIN latest l
+      ON l.prod_area_code = pas.prod_area_code
+     AND l.max_date = pas.snapshot_date
+    ORDER BY pas.prod_area_code;
+  `);
+
+  const statusByCode = new Map();
+  for (const r of statusRows) {
+    statusByCode.set(Number(r.prod_area_code), normTrafficStatus(r.prod_area_status));
+  }
+
+  const tbody = safeEl("areasTable").querySelector("tbody");
+  tbody.innerHTML = "";
+
+  for (let code = 1; code <= 13; code++) {
+    const status = statusByCode.get(code) || null;
+    const total = Number(areaPermitCount.get(code) || 0);
+
+    const tr = document.createElement("tr");
+    tr.dataset.areaCode = String(code);
+    tr.innerHTML = `
+      <td>
+        <button class="expander-btn" type="button" aria-label="Vis detaljer" aria-expanded="false">
+          <span class="chev">▶</span>
+        </button>
+      </td>
+      <td>
+        ${trafficHtml(code, status)}
+        <span class="muted" style="margin-left:6px">${escapeHtml(PRODUCTION_AREA_NAMES[code] || "")}</span>
+      </td>
+      <td>${escapeHtml(status === "GREEN" ? "Grønn" : status === "YELLOW" ? "Gul" : status === "RED" ? "Rød" : "Ukjent")}</td>
+      <td style="text-align:right">${escapeHtml(total.toLocaleString("nb-NO"))}</td>
+    `;
+    tbody.appendChild(tr);
+
+    const detailsTr = document.createElement("tr");
+    detailsTr.className = "details-row hidden";
+    detailsTr.dataset.detailsFor = String(code);
+    detailsTr.innerHTML = `
+      <td colspan="4">
+        <div class="details-box">
+          <div class="muted" style="margin-bottom:8px">Klikk pilen for å se selskaper…</div>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(detailsTr);
+  }
+
+  // Klikk-håndtering (delegert)
+  tbody.onclick = (e) => {
+    const btn = e.target.closest(".expander-btn");
+    if (!btn) return;
+
+    const row = e.target.closest("tr");
+    if (!row) return;
+
+    const code = Number(row.dataset.areaCode);
+    const detailsRow = tbody.querySelector(`tr.details-row[data-details-for="${code}"]`);
+    if (!detailsRow) return;
+
+    const isOpen = !detailsRow.classList.contains("hidden");
+
+    detailsRow.classList.toggle("hidden", isOpen);
+    row.classList.toggle("is-open", !isOpen);
+    btn.setAttribute("aria-expanded", String(!isOpen));
+
+    if (!isOpen) {
+      const box = detailsRow.querySelector(".details-box");
+      if (!box) return;
+
+      const ownersMap = areaOwnersIndex.get(code) || new Map();
+      const owners = Array.from(ownersMap.values())
+        .sort((a, b) => (b.count - a.count) || String(a.owner_name).localeCompare(String(b.owner_name), "nb", { sensitivity: "base" }));
+
+      if (owners.length === 0) {
+        box.innerHTML = `<div class="details-empty">Ingen aktive tillatelser funnet i dette området.</div>`;
+        return;
+      }
+
+      box.innerHTML = `
+        <div class="details-grid">
+          ${owners.map(o => {
+            const name = escapeHtml(o.owner_name || "(ukjent)");
+            const ident = String(o.owner_identity ?? "").trim();
+            const left = ident
+              ? `<a class="link" href="#/owner/${encodeURIComponent(ident)}">${name}</a> <span class="muted-small">(${escapeHtml(ident)})</span>`
+              : `${name}`;
+            return `
+              <div class="details-item">
+                <div>${left}</div>
+                <div class="details-count">${escapeHtml(String(o.count))}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+  };
+}
 
 
 // --- routing ---
