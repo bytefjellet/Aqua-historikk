@@ -197,41 +197,58 @@ function getTransferEventsForPermit(permitKey) {
 }
 
 function getOriginalOwnerForPermit(permitKey) {
-  const key = normPermitForSql(permitKey);
+  const t = "license_original_owner";
+  const key = String(permitKey ?? "").trim().toUpperCase();
 
-  // juster hvis dine kolonnenavn er annerledes (men du sa permit_key er PK her)
+  // permit-kolonne (du sa permit_key er PK, men vi gjør det robust)
+  const permitCol =
+    hasColumn(t, "permit_key") ? "permit_key" :
+    hasColumn(t, "license_key") ? "license_key" :
+    hasColumn(t, "tillatelse") ? "tillatelse" :
+    null;
+
+  if (!permitCol) {
+    console.warn("Fant ikke permit-kolonne i license_original_owner");
+    return null;
+  }
+
+  // navn-kolonne
+  const nameCol =
+    hasColumn(t, "owner_name") ? "owner_name" :
+    hasColumn(t, "original_owner_name") ? "original_owner_name" :
+    hasColumn(t, "innehaver_navn") ? "innehaver_navn" :
+    hasColumn(t, "name") ? "name" :
+    null;
+
+  // orgnr/ident-kolonne
+  const identCol =
+    hasColumn(t, "owner_orgnr") ? "owner_orgnr" :
+    hasColumn(t, "owner_identity") ? "owner_identity" :
+    hasColumn(t, "original_owner_orgnr") ? "original_owner_orgnr" :
+    hasColumn(t, "orgnr") ? "orgnr" :
+    hasColumn(t, "innehaver_orgnr") ? "innehaver_orgnr" :
+    null;
+
+  const selectCols = [
+    nameCol ? `${nameCol} AS name` : `NULL AS name`,
+    identCol ? `${identCol} AS ident` : `NULL AS ident`,
+  ].join(", ");
+
   const row = one(`
-    SELECT
-      owner_name AS owner_name,
-      owner_orgnr AS owner_orgnr,
-      owner_identity AS owner_identity
-    FROM license_original_owner
-    WHERE UPPER(TRIM(permit_key)) = UPPER(TRIM(?))
+    SELECT ${selectCols}
+    FROM ${t}
+    WHERE UPPER(TRIM(${permitCol})) = UPPER(TRIM(?))
     LIMIT 1;
   `, [key]);
 
   if (!row) return null;
 
-  const name = String(row.owner_name ?? "").trim();
-  const ident = String(row.owner_orgnr ?? row.owner_identity ?? "").trim();
-
-  return { name, ident };
+  return {
+    name: String(row.name ?? "").trim(),
+    ident: String(row.ident ?? "").trim()
+  };
 }
 
-
-function parseProdAreaCode(raw) {
-  const s = String(raw ?? "").trim();
-  if (!s) return null;
-
-  // finn første tallsekvens i strengen (f.eks "7", "PO7", "7 - Helgeland", osv.)
-  const m = s.match(/\d+/);
-  if (!m) return null;
-
-  const n = Number(m[0]);
-  if (!Number.isFinite(n)) return null;
-  if (n < 1 || n > 13) return null;
-  return n;
-}
 
 
 function hasColumn(table, col) {
