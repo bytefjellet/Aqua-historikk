@@ -4,7 +4,8 @@
 :root {
   --bg: #f6f8fb;
   --surface: #ffffff;
-  --border: #e5e9f0;
+  --border: #a82e39;
+  --test: #f7e2e8;
 
   --text: #1f2937;
   --muted: #6b7280;
@@ -44,7 +45,7 @@ body {
    Header
    ========================= */
 .topbar {
-  background: var(--surface);
+  background: var(--test);
   border-bottom: none;
 }
 
