@@ -543,6 +543,79 @@ function buildOwnershipIntervalsForPermit(permitKey) {
   return intervals;
 }
 
+function computeGrunnrenteYearSetForOwner(ownerOrgnr, fromYear = 2023) {
+  const owner = String(ownerOrgnr ?? "").trim().replace(/\s+/g, "");
+  if (!owner) return new Set();
+
+  const nowYear = new Date().getFullYear();
+
+  // Finn bare de grunnrentepliktige tillatelsene som innehaveren faktisk har vært borti (original eller mottaker)
+  const permits = execAll(`
+    WITH gr AS (
+      SELECT
+        UPPER(REPLACE(TRIM(permit_key), ' ', '')) AS k,
+        permit_key
+      FROM permit_current
+      WHERE grunnrente_pliktig = 1
+    ),
+    own AS (
+      SELECT DISTINCT
+        UPPER(REPLACE(TRIM(permit_key), ' ', '')) AS k
+      FROM license_transfers
+      WHERE TRIM(current_owner_orgnr) = TRIM(?)
+
+      UNION
+
+      SELECT DISTINCT
+        UPPER(REPLACE(TRIM(permit_key), ' ', '')) AS k
+      FROM license_original_owner
+      WHERE TRIM(original_owner_orgnr) = TRIM(?)
+    )
+    SELECT gr.permit_key
+    FROM gr
+    JOIN own USING (k)
+    ORDER BY gr.permit_key;
+  `, [owner, owner]);
+
+  const yearSet = new Set();
+
+  for (const p of permits) {
+    const permitKey = String(p.permit_key ?? "").trim();
+    if (!permitKey) continue;
+
+    // Bruk eksisterende historikkbygger (original + transfers)
+    const intervals = buildOwnershipIntervalsForPermit(permitKey)
+      .filter(x => String(x.ident ?? "").trim() === owner);
+
+    for (const it of intervals) {
+      const to = String(it.to ?? "").trim();
+
+      // Fra-år:
+      let startYear = fromYear;
+      if (it.fromIso) {
+        const y = Number(String(it.fromIso).slice(0, 4));
+        if (Number.isFinite(y)) startYear = Math.max(fromYear, y);
+      }
+
+      // Til-år:
+      let endYear = nowYear;
+      if (to && to !== "Aktiv" && /^\d{4}-\d{2}-\d{2}/.test(to)) {
+        const y = Number(to.slice(0, 4));
+        if (Number.isFinite(y)) endYear = Math.min(nowYear, y);
+      }
+
+      if (endYear < fromYear) continue;
+
+      for (let y = startYear; y <= endYear; y++) {
+        if (y >= fromYear && y <= nowYear) yearSet.add(y);
+      }
+    }
+  }
+
+  return yearSet;
+}
+
+
 // -------------------------------
 // Owner/permit empty state helpers
 // -------------------------------
@@ -822,7 +895,8 @@ function renderOwnerCardUnified({
   formerPermitCount,
   activeCapacityTN = 0,
   grunnrenteCapacityTN = 0,
-  grunnYears = [],
+  grunnYearsSet = new Set(),
+  fromYear = 2023,
 }) {
   const card = safeEl("ownerCard");
   card.classList.remove("hidden");
@@ -842,21 +916,26 @@ function renderOwnerCardUnified({
       ? `<span class="pill pill--blue">Grunnrentepliktig</span>`
       : `<span class="pill pill--yellow">Ikke grunnrentepliktig</span>`;
 
-  const years = (grunnYears || []).filter(Boolean);
-  const yearsHtml =
-    grunnCount > 0 && years.length > 0
-      ? `
-        <div class="year-note">
-          <div class="year-chips">
-            ${years.map(y => `<span class="year-chip year-chip--active">${escapeHtml(y)}</span>`).join("")}
-          </div>
-          <div class="year-note-text">
-            <div>Angir år der innehaveren har vært eier av tillatelser som i dag er grunnrentepliktige.</div>
-            <div>Historikk før 2025 er beregnet ut fra opplysninger om overføringer hentet fra Akvakulturregisteret.</div>
-          </div>
-        </div>
-      `
-      : "";
+    const nowYear = new Date().getFullYear();
+  const yearsAll = [];
+  for (let y = fromYear; y <= nowYear; y++) yearsAll.push(y);
+
+  const yearsHtml = `
+    <div class="year-note">
+      <div class="year-chips">
+        ${yearsAll.map(y => {
+          const isActive = grunnYearsSet && grunnYearsSet.has(y);
+          return `<span class="year-chip ${isActive ? "year-chip--active" : "year-chip--inactive"}">${escapeHtml(y)}</span>`;
+        }).join("")}
+      </div>
+      <div class="year-note-text">
+        <div><span class="year-chip year-chip--active">Blå</span> = har i året vært innehaver av minst én tillatelse som i dag er grunnrentepliktig.</div>
+        <div><span class="year-chip year-chip--inactive">Gul</span> = har ikke vært innehaver av slike tillatelser i året.</div>
+        <div>Historikk før 21. desember 2025 er beregnet ut fra overføringer hentet fra Akvakulturregisteret.</div>
+      </div>
+    </div>
+  `;
+
 
   card.innerHTML = `
     <div style="font-size:1.1rem;font-weight:700">${escapeHtml(name)}</div>
@@ -1381,22 +1460,29 @@ function renderOwner(ownerIdentity) {
     0
   );
 
-  const grunnrenteActiveCount = active.reduce((acc, r) => acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0), 0);
-  const grunnYears = getGrunnrenteYearsForOwner(ownerIdentityNorm, 2023);
+  const grunnrenteActiveCount = active.reduce(
+  (acc, r) => acc + (Number(r.grunnrente_pliktig) === 1 ? 1 : 0),
+  0
+);
 
-  setOwnerEmptyStateVisible(false);
-  setOwnerResultsVisible(true);
+// NY: sett med år der innehaveren har vært grunnrentepliktig
+const grunnYearsSet = computeGrunnrenteYearSetForOwner(ownerIdentityNorm, 2023);
 
-  renderOwnerCardUnified({
-    ownerName: stats.owner_name || "(ukjent)",
-    ownerIdentity: ownerIdentityNorm,
-    activeCount: Number(stats.active_permits ?? 0),
-    grunnrenteActiveCount,
-    formerPermitCount: Number(stats.former_permits ?? 0),
-    activeCapacityTN,
-    grunnrenteCapacityTN,
-    grunnYears,
-  });
+setOwnerEmptyStateVisible(false);
+setOwnerResultsVisible(true);
+
+renderOwnerCardUnified({
+  ownerName: stats.owner_name || "(ukjent)",
+  ownerIdentity: ownerIdentityNorm,
+  activeCount: Number(stats.active_permits ?? 0),
+  grunnrenteActiveCount,
+  formerPermitCount: Number(stats.former_permits ?? 0),
+  activeCapacityTN,
+  grunnrenteCapacityTN,
+  grunnYearsSet,   // 👈 NY parameter
+  fromYear: 2023,  // 👈 eksplisitt startår
+});
+
 
   // --- FILTER: grunnrente + formål (kun for aktiv-tabellen) ---
   const onlyGrunnrente = $("ownerOnlyGrunnrente")?.checked === true;
