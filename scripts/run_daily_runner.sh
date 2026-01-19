@@ -49,11 +49,6 @@ if [[ -f "$DONE_FILE" ]]; then
   exit 0
 fi
 
-if [[ -f "$DONE_FILE" ]]; then
-  echo "==> $(ts) Already completed today ($STAMP). Exiting."
-  exit 0
-fi
-
 # ---- Lock (macOS-safe) ----
 if ! /bin/mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "!! $(ts) Another run is already running. Exiting."
